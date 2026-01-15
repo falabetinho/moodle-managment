@@ -51,6 +51,9 @@ class Moodle_Management {
         // Create database tables on activation
         add_action('plugins_loaded', array($this, 'create_tables'));
 
+        // Enqueue frontend assets
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
+
         // Load admin handlers early so AJAX hooks are registered
         if (is_admin()) {
             $this->load_admin_tabs();
@@ -115,6 +118,13 @@ class Moodle_Management {
                 'nonce' => wp_create_nonce('moodle_management_nonce')
             )
         );
+    }
+
+    /**
+     * Enqueue frontend assets
+     */
+    public function enqueue_frontend_assets() {
+        // Assets não necessários, pois os filtros são tratados via forms padrão
     }
 
     /**

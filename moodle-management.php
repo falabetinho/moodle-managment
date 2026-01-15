@@ -25,10 +25,12 @@ define('MOODLE_MANAGEMENT_URL', plugin_dir_url(__FILE__));
 // Include required files
 require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-management.php';
 require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-api.php';
+require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-courses.php';
 
 // Initialize the plugin
 function moodle_management_init() {
     Moodle_Management::get_instance();
+    new Moodle_Courses();
 }
 add_action('plugins_loaded', 'moodle_management_init');
 
