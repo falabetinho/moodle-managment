@@ -551,27 +551,75 @@ class Moodle_Admin_Tabs {
 
             $count = 0;
             foreach ($methods as $m) {
-                // Safely map known fields; store full JSON in data
+                // Map all known fields from the API response
                 $moodle_enrol_id = isset($m['id']) ? intval($m['id']) : 0;
                 $enrol_plugin = isset($m['enrol']) ? sanitize_text_field($m['enrol']) : '';
                 $name = isset($m['name']) ? sanitize_text_field($m['name']) : '';
                 $status = isset($m['status']) ? intval($m['status']) : 0;
+                $roleid = isset($m['roleid']) ? intval($m['roleid']) : null;
+                $cost = isset($m['cost']) ? floatval($m['cost']) : null;
+                $currency = isset($m['currency']) ? sanitize_text_field($m['currency']) : null;
+                $enrolstartdate = isset($m['enrolstartdate']) ? intval($m['enrolstartdate']) : null;
+                $enrolenddate = isset($m['enrolenddate']) ? intval($m['enrolenddate']) : null;
+                $enrolperiod = isset($m['enrolperiod']) ? intval($m['enrolperiod']) : null;
+                $expirynotify = isset($m['expirynotify']) ? intval($m['expirynotify']) : null;
+                $expirythreshold = isset($m['expirythreshold']) ? intval($m['expirythreshold']) : null;
+                $notifyall = isset($m['notifyall']) ? intval($m['notifyall']) : null;
+                $category_id = isset($m['category_id']) ? intval($m['category_id']) : null;
+                $default_status_id = isset($m['default_status_id']) ? intval($m['default_status_id']) : null;
+                $is_enrollment_fee = isset($m['is_enrollment_fee']) ? intval($m['is_enrollment_fee']) : 0;
+                $installments = isset($m['installments']) ? intval($m['installments']) : null;
                 $data = wp_json_encode($m);
 
                 if ($moodle_enrol_id && $enrol_plugin) {
                     $wpdb->query($wpdb->prepare(
-                        "INSERT INTO $table (moodle_enrol_id, moodle_course_id, enrol_plugin, name, status, data)
-                         VALUES (%d, %d, %s, %s, %d, %s)
-                         ON DUPLICATE KEY UPDATE enrol_plugin = %s, name = %s, status = %d, data = %s",
+                        "INSERT INTO $table (
+                            moodle_enrol_id, moodle_course_id, enrol_plugin, name, status,
+                            roleid, cost, currency, enrolstartdate, enrolenddate, enrolperiod,
+                            expirynotify, expirythreshold, notifyall, category_id, default_status_id,
+                            is_enrollment_fee, installments, data
+                        )
+                         VALUES (%d, %d, %s, %s, %d, %d, %f, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s)
+                         ON DUPLICATE KEY UPDATE 
+                            enrol_plugin = %s, name = %s, status = %d,
+                            roleid = %d, cost = %f, currency = %s, enrolstartdate = %d, enrolenddate = %d,
+                            enrolperiod = %d, expirynotify = %d, expirythreshold = %d, notifyall = %d,
+                            category_id = %d, default_status_id = %d, is_enrollment_fee = %d, installments = %d, data = %s",
                         $moodle_enrol_id,
                         $course_id,
                         $enrol_plugin,
                         $name,
                         $status,
+                        $roleid,
+                        $cost,
+                        $currency,
+                        $enrolstartdate,
+                        $enrolenddate,
+                        $enrolperiod,
+                        $expirynotify,
+                        $expirythreshold,
+                        $notifyall,
+                        $category_id,
+                        $default_status_id,
+                        $is_enrollment_fee,
+                        $installments,
                         $data,
                         $enrol_plugin,
                         $name,
                         $status,
+                        $roleid,
+                        $cost,
+                        $currency,
+                        $enrolstartdate,
+                        $enrolenddate,
+                        $enrolperiod,
+                        $expirynotify,
+                        $expirythreshold,
+                        $notifyall,
+                        $category_id,
+                        $default_status_id,
+                        $is_enrollment_fee,
+                        $installments,
                         $data
                     ));
                     $count++;

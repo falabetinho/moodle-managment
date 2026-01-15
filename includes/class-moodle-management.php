@@ -240,13 +240,27 @@ class Moodle_Management {
             enrol_plugin varchar(100) NOT NULL,
             name varchar(255) DEFAULT '',
             status int(11) DEFAULT 0,
+            roleid int(11) DEFAULT NULL,
+            cost decimal(10,2) DEFAULT NULL,
+            currency varchar(10) DEFAULT NULL,
+            enrolstartdate int(11) DEFAULT NULL,
+            enrolenddate int(11) DEFAULT NULL,
+            enrolperiod int(11) DEFAULT NULL,
+            expirynotify int(11) DEFAULT NULL,
+            expirythreshold int(11) DEFAULT NULL,
+            notifyall int(11) DEFAULT NULL,
+            category_id int(11) DEFAULT NULL,
+            default_status_id int(11) DEFAULT NULL,
+            is_enrollment_fee tinyint(1) DEFAULT 0,
+            installments int(11) DEFAULT NULL,
             data longtext,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY enrol_unique (moodle_enrol_id, moodle_course_id),
             KEY course_idx (moodle_course_id),
-            KEY plugin_idx (enrol_plugin)
+            KEY plugin_idx (enrol_plugin),
+            KEY category_idx (category_id)
         ) $charset_collate;";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
