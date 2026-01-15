@@ -157,11 +157,33 @@ class Moodle_Management {
                 moodle_id int(11) NOT NULL,
                 name varchar(255) NOT NULL,
                 description longtext,
-                parent_id int(11),
+                parent_id int(11) DEFAULT 0,
+                path varchar(500) DEFAULT '',
                 created_at datetime DEFAULT CURRENT_TIMESTAMP,
                 updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (id),
-                UNIQUE KEY moodle_id (moodle_id)
+                UNIQUE KEY moodle_id (moodle_id),
+                KEY parent_id (parent_id),
+                KEY path (path(191))
+            ) $charset_collate;";
+            
+            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+            dbDelta($sql);
+        } else {
+            // dbDelta adds new columns/keys if schema changes
+            $sql = "CREATE TABLE $table_categories (
+                id mediumint(9) NOT NULL AUTO_INCREMENT,
+                moodle_id int(11) NOT NULL,
+                name varchar(255) NOT NULL,
+                description longtext,
+                parent_id int(11) DEFAULT 0,
+                path varchar(500) DEFAULT '',
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY moodle_id (moodle_id),
+                KEY parent_id (parent_id),
+                KEY path (path(191))
             ) $charset_collate;";
             
             require_once ABSPATH . 'wp-admin/includes/upgrade.php';

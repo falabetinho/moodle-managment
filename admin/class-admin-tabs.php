@@ -42,6 +42,28 @@ class Moodle_Admin_Tabs {
     }
 
     /**
+     * Calculate depth based on Moodle path
+     */
+    private function get_category_depth($path) {
+        if (empty($path)) {
+            return 0;
+        }
+
+        $parts = array_filter(explode('/', $path), 'strlen');
+        $depth = count($parts) - 1;
+
+        return $depth < 0 ? 0 : $depth;
+    }
+
+    /**
+     * Render indented name for tree-like view
+     */
+    private function render_category_name($name, $depth) {
+        $indent = str_repeat('&mdash; ', $depth);
+        return wp_kses_post($indent . esc_html($name));
+    }
+
+    /**
      * Render admin page
      */
     public function render() {
@@ -177,7 +199,7 @@ class Moodle_Admin_Tabs {
     private function render_categories_tab() {
         global $wpdb;
         $table = $wpdb->prefix . 'moodle_categories';
-        $categories = $wpdb->get_results("SELECT * FROM $table ORDER BY name ASC");
+        $categories = $wpdb->get_results("SELECT * FROM $table ORDER BY path ASC, parent_id ASC, name ASC");
         ?>
         <div class="moodle-tab-content">
             <h2><?php echo esc_html(__('Gerenciar Categorias do Moodle', 'moodle-management')); ?></h2>
@@ -200,15 +222,20 @@ class Moodle_Admin_Tabs {
                         <tr>
                             <th><?php echo esc_html(__('ID Moodle', 'moodle-management')); ?></th>
                             <th><?php echo esc_html(__('Nome', 'moodle-management')); ?></th>
+                            <th><?php echo esc_html(__('Path', 'moodle-management')); ?></th>
+                            <th><?php echo esc_html(__('Parent', 'moodle-management')); ?></th>
                             <th><?php echo esc_html(__('Descrição', 'moodle-management')); ?></th>
                             <th><?php echo esc_html(__('Data de Atualização', 'moodle-management')); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($categories as $category) : ?>
+                            <?php $depth = $this->get_category_depth($category->path); ?>
                             <tr>
                                 <td><?php echo esc_html($category->moodle_id); ?></td>
-                                <td><?php echo esc_html($category->name); ?></td>
+                                <td><?php echo $this->render_category_name($category->name, $depth); ?></td>
+                                <td><?php echo esc_html($category->path); ?></td>
+                                <td><?php echo esc_html($category->parent_id); ?></td>
                                 <td><?php echo wp_kses_post(wp_trim_words($category->description, 20)); ?></td>
                                 <td><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($category->updated_at))); ?></td>
                             </tr>
@@ -401,16 +428,18 @@ class Moodle_Admin_Tabs {
             $count = 0;
             foreach ($categories as $category) {
                 $wpdb->query($wpdb->prepare(
-                    "INSERT INTO $table (moodle_id, name, description, parent_id) 
-                     VALUES (%d, %s, %s, %d)
-                     ON DUPLICATE KEY UPDATE name = %s, description = %s, parent_id = %d",
+                    "INSERT INTO $table (moodle_id, name, description, parent_id, path) 
+                     VALUES (%d, %s, %s, %d, %s)
+                     ON DUPLICATE KEY UPDATE name = %s, description = %s, parent_id = %d, path = %s",
                     $category['id'],
                     $category['name'],
                     isset($category['description']) ? $category['description'] : '',
-                    isset($category['parent']) ? $category['parent'] : 0,
+                    isset($category['parent']) ? (int) $category['parent'] : 0,
+                    isset($category['path']) ? $category['path'] : '',
                     $category['name'],
                     isset($category['description']) ? $category['description'] : '',
-                    isset($category['parent']) ? $category['parent'] : 0
+                    isset($category['parent']) ? (int) $category['parent'] : 0,
+                    isset($category['path']) ? $category['path'] : ''
                 ));
                 $count++;
             }
