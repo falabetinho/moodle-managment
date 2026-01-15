@@ -17,6 +17,11 @@ class Moodle_Management {
     private static $instance = null;
 
     /**
+     * Admin tabs handler
+     */
+    private $admin_tabs;
+
+    /**
      * Get singleton instance
      */
     public static function get_instance() {
@@ -45,6 +50,23 @@ class Moodle_Management {
         
         // Create database tables on activation
         add_action('plugins_loaded', array($this, 'create_tables'));
+
+        // Load admin handlers early so AJAX hooks are registered
+        if (is_admin()) {
+            $this->load_admin_tabs();
+        }
+    }
+
+    /**
+     * Load admin tabs class and register AJAX hooks
+     */
+    private function load_admin_tabs() {
+        if ($this->admin_tabs) {
+            return;
+        }
+
+        require_once MOODLE_MANAGEMENT_PATH . 'admin/class-admin-tabs.php';
+        $this->admin_tabs = new Moodle_Admin_Tabs();
     }
 
     /**
@@ -99,9 +121,8 @@ class Moodle_Management {
      * Render admin page with tabs
      */
     public function render_admin_page() {
-        require_once MOODLE_MANAGEMENT_PATH . 'admin/class-admin-tabs.php';
-        $admin_tabs = new Moodle_Admin_Tabs();
-        $admin_tabs->render();
+        $this->load_admin_tabs();
+        $this->admin_tabs->render();
     }
 
     /**

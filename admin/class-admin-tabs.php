@@ -359,7 +359,7 @@ class Moodle_Admin_Tabs {
      * AJAX: Test connection
      */
     public function ajax_test_connection() {
-        check_ajax_referer('moodle_management_nonce');
+        check_ajax_referer('moodle_management_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
             wp_die(esc_html(__('Sem permissão', 'moodle-management')));
@@ -379,7 +379,7 @@ class Moodle_Admin_Tabs {
      * AJAX: Sync categories from Moodle
      */
     public function ajax_sync_categories() {
-        check_ajax_referer('moodle_management_nonce');
+        check_ajax_referer('moodle_management_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
             wp_die(esc_html(__('Sem permissão', 'moodle-management')));
@@ -429,7 +429,7 @@ class Moodle_Admin_Tabs {
      * AJAX: Sync courses from Moodle
      */
     public function ajax_sync_courses() {
-        check_ajax_referer('moodle_management_nonce');
+        check_ajax_referer('moodle_management_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
             wp_die(esc_html(__('Sem permissão', 'moodle-management')));
@@ -481,7 +481,7 @@ class Moodle_Admin_Tabs {
      * AJAX: Sync enrollments from Moodle
      */
     public function ajax_sync_enrollments() {
-        check_ajax_referer('moodle_management_nonce');
+        check_ajax_referer('moodle_management_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
             wp_die(esc_html(__('Sem permissão', 'moodle-management')));
