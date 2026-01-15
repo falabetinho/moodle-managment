@@ -230,6 +230,27 @@ class Moodle_Management {
             require_once ABSPATH . 'wp-admin/includes/upgrade.php';
             dbDelta($sql);
         }
+
+        // Table for storing enrolment methods per course
+        $table_enrol_methods = $wpdb->prefix . 'moodle_enrol_methods';
+        $sql = "CREATE TABLE $table_enrol_methods (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            moodle_enrol_id int(11) NOT NULL,
+            moodle_course_id int(11) NOT NULL,
+            enrol_plugin varchar(100) NOT NULL,
+            name varchar(255) DEFAULT '',
+            status int(11) DEFAULT 0,
+            data longtext,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY enrol_unique (moodle_enrol_id, moodle_course_id),
+            KEY course_idx (moodle_course_id),
+            KEY plugin_idx (enrol_plugin)
+        ) $charset_collate;";
+
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        dbDelta($sql);
     }
 
     /**

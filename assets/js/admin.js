@@ -190,19 +190,29 @@ jQuery(function($) {
         });
     });
 
-    // Sync enrollments
-    $('#sync-enrollments').on('click', function(e) {
+    // Sync enrol methods
+    $('#sync-enrol-methods').on('click', function(e) {
         e.preventDefault();
 
         var $button = $(this);
-        var $resultDiv = $('#sync-enrollments-result');
+        var $resultDiv = $('#sync-enrol-result');
+        var courseId = $('#enrol-course-select').val();
+        if (!courseId || courseId === '0') {
+            $resultDiv
+                .removeClass('notice-success')
+                .addClass('notice notice-error')
+                .html('<p>Selecione um curso para sincronizar.</p>')
+                .show();
+            return;
+        }
 
         $.ajax({
             type: 'POST',
             url: moodleManagement.ajaxurl,
             data: {
-                action: 'moodle_sync_enrollments',
-                nonce: moodleManagement.nonce
+                action: 'moodle_sync_enrol_methods',
+                nonce: moodleManagement.nonce,
+                course_id: courseId
             },
             beforeSend: function() {
                 $button.prop('disabled', true).text('Sincronizando...');
@@ -220,7 +230,7 @@ jQuery(function($) {
                 }, 2000);
             },
             error: function(response) {
-                var errorMsg = response.responseJSON?.data?.message || 'Erro ao sincronizar enrollments';
+                var errorMsg = response.responseJSON?.data?.message || 'Erro ao sincronizar métodos de enrol';
                 $resultDiv
                     .removeClass('notice-success')
                     .addClass('notice notice-error')
@@ -228,7 +238,7 @@ jQuery(function($) {
                     .show();
             },
             complete: function() {
-                $button.prop('disabled', false).text('Sincronizar Enrollments do Moodle');
+                $button.prop('disabled', false).text('Sincronizar Métodos de Enrol do Moodle');
             }
         });
     });

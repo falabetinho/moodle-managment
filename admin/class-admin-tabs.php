@@ -24,7 +24,7 @@ class Moodle_Admin_Tabs {
             'connection' => __('Configuração de Conexão', 'moodle-management'),
             'categories' => __('Gerenciar Categorias', 'moodle-management'),
             'courses' => __('Importar Cursos', 'moodle-management'),
-            'enrollments' => __('Importar Enrollments', 'moodle-management')
+            'enrol' => __('Importar Métodos de Enrol', 'moodle-management')
         );
         
         $this->init_hooks();
@@ -38,7 +38,7 @@ class Moodle_Admin_Tabs {
         add_action('wp_ajax_moodle_test_connection', array($this, 'ajax_test_connection'));
         add_action('wp_ajax_moodle_sync_categories', array($this, 'ajax_sync_categories'));
         add_action('wp_ajax_moodle_sync_courses', array($this, 'ajax_sync_courses'));
-        add_action('wp_ajax_moodle_sync_enrollments', array($this, 'ajax_sync_enrollments'));
+        add_action('wp_ajax_moodle_sync_enrol_methods', array($this, 'ajax_sync_enrol_methods'));
     }
 
     /**
@@ -97,8 +97,8 @@ class Moodle_Admin_Tabs {
                     case 'courses':
                         $this->render_courses_tab();
                         break;
-                    case 'enrollments':
-                        $this->render_enrollments_tab();
+                    case 'enrol':
+                        $this->render_enrol_tab();
                         break;
                 }
                 ?>
@@ -306,52 +306,70 @@ class Moodle_Admin_Tabs {
     /**
      * Render enrollments import tab
      */
-    private function render_enrollments_tab() {
+    private function render_enrol_tab() {
         global $wpdb;
-        $table = $wpdb->prefix . 'moodle_enrollments';
-        $enrollments = $wpdb->get_results("SELECT * FROM $table ORDER BY created_at DESC LIMIT 50");
+        $courses_table = $wpdb->prefix . 'moodle_courses';
+        $methods_table = $wpdb->prefix . 'moodle_enrol_methods';
+        $courses = $wpdb->get_results("SELECT moodle_id, name FROM $courses_table ORDER BY name ASC");
+
+        $selected_course = isset($_GET['course']) ? intval($_GET['course']) : 0;
+        $methods = array();
+        if ($selected_course) {
+            $methods = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $methods_table WHERE moodle_course_id = %d ORDER BY enrol_plugin ASC",
+                $selected_course
+            ));
+        }
         ?>
         <div class="moodle-tab-content">
-            <h2><?php echo esc_html(__('Importar Enrollments do Moodle', 'moodle-management')); ?></h2>
-            
-            <p>
-                <button type="button" class="button button-primary" id="sync-enrollments">
-                    <?php echo esc_html(__('Sincronizar Enrollments do Moodle', 'moodle-management')); ?>
+            <h2><?php echo esc_html(__('Importar Métodos de Enrol do Moodle', 'moodle-management')); ?></h2>
+
+            <form method="get" action="">
+                <input type="hidden" name="page" value="moodle-management" />
+                <input type="hidden" name="tab" value="enrol" />
+                <label for="enrol-course-select"><?php echo esc_html(__('Selecione o Curso', 'moodle-management')); ?></label>
+                <select id="enrol-course-select" name="course">
+                    <option value="0"><?php echo esc_html(__('— Selecione —', 'moodle-management')); ?></option>
+                    <?php foreach ($courses as $course): ?>
+                        <option value="<?php echo esc_attr($course->moodle_id); ?>" <?php selected($selected_course, $course->moodle_id); ?>>
+                            <?php echo esc_html($course->name); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="button"><?php echo esc_html(__('Carregar', 'moodle-management')); ?></button>
+            </form>
+
+            <p style="margin-top: 10px;">
+                <button type="button" class="button button-primary" id="sync-enrol-methods" <?php disabled(!$selected_course); ?>>
+                    <?php echo esc_html(__('Sincronizar Métodos de Enrol do Moodle', 'moodle-management')); ?>
                 </button>
             </p>
 
-            <div id="sync-enrollments-result" class="notice" style="display:none;"></div>
+            <div id="sync-enrol-result" class="notice" style="display:none;"></div>
 
-            <?php if (empty($enrollments)) : ?>
+            <?php if ($selected_course && empty($methods)) : ?>
                 <div class="notice notice-info">
-                    <p><?php echo esc_html(__('Nenhum enrollment sincronizado ainda. Clique no botão acima para sincronizar.', 'moodle-management')); ?></p>
+                    <p><?php echo esc_html(__('Nenhum método sincronizado ainda. Clique acima para sincronizar.', 'moodle-management')); ?></p>
                 </div>
-            <?php else : ?>
+            <?php elseif ($selected_course) : ?>
                 <table class="wp-list-table widefat striped">
                     <thead>
                         <tr>
-                            <th><?php echo esc_html(__('ID Usuário Moodle', 'moodle-management')); ?></th>
-                            <th><?php echo esc_html(__('ID Curso Moodle', 'moodle-management')); ?></th>
-                            <th><?php echo esc_html(__('Role', 'moodle-management')); ?></th>
-                            <th><?php echo esc_html(__('Método de Inscrição', 'moodle-management')); ?></th>
+                            <th><?php echo esc_html(__('ID Enrol', 'moodle-management')); ?></th>
+                            <th><?php echo esc_html(__('Plugin', 'moodle-management')); ?></th>
+                            <th><?php echo esc_html(__('Nome', 'moodle-management')); ?></th>
                             <th><?php echo esc_html(__('Status', 'moodle-management')); ?></th>
-                            <th><?php echo esc_html(__('Data', 'moodle-management')); ?></th>
+                            <th><?php echo esc_html(__('Atualizado', 'moodle-management')); ?></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($enrollments as $enrollment) : ?>
+                        <?php foreach ($methods as $method) : ?>
                             <tr>
-                                <td><?php echo esc_html($enrollment->moodle_user_id); ?></td>
-                                <td><?php echo esc_html($enrollment->moodle_course_id); ?></td>
-                                <td><?php echo esc_html($enrollment->role); ?></td>
-                                <td><?php echo esc_html($enrollment->enrol_method); ?></td>
-                                <td>
-                                    <?php 
-                                    $status = $enrollment->imported ? __('Importado', 'moodle-management') : __('Não Importado', 'moodle-management');
-                                    echo esc_html($status);
-                                    ?>
-                                </td>
-                                <td><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($enrollment->created_at))); ?></td>
+                                <td><?php echo esc_html($method->moodle_enrol_id); ?></td>
+                                <td><?php echo esc_html($method->enrol_plugin); ?></td>
+                                <td><?php echo esc_html($method->name); ?></td>
+                                <td><?php echo esc_html($method->status); ?></td>
+                                <td><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($method->updated_at))); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -509,15 +527,62 @@ class Moodle_Admin_Tabs {
     /**
      * AJAX: Sync enrollments from Moodle
      */
-    public function ajax_sync_enrollments() {
+    public function ajax_sync_enrol_methods() {
         check_ajax_referer('moodle_management_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
             wp_die(esc_html(__('Sem permissão', 'moodle-management')));
         }
 
-        wp_send_json_success(array(
-            'message' => __('Funcionalidade de sincronização de enrollments em desenvolvimento.', 'moodle-management')
-        ));
+        $course_id = isset($_POST['course_id']) ? intval($_POST['course_id']) : 0;
+        if (!$course_id) {
+            wp_send_json_error(array('message' => __('Curso inválido', 'moodle-management')));
+        }
+
+        try {
+            $api = new Moodle_API();
+            if (!$api->is_configured()) {
+                wp_send_json_error(array('message' => __('Conexão não configurada', 'moodle-management')));
+            }
+
+            $methods = $api->get_course_enrolment_methods($course_id);
+            global $wpdb;
+            $table = $wpdb->prefix . 'moodle_enrol_methods';
+
+            $count = 0;
+            foreach ($methods as $m) {
+                // Safely map known fields; store full JSON in data
+                $moodle_enrol_id = isset($m['id']) ? intval($m['id']) : 0;
+                $enrol_plugin = isset($m['enrol']) ? sanitize_text_field($m['enrol']) : '';
+                $name = isset($m['name']) ? sanitize_text_field($m['name']) : '';
+                $status = isset($m['status']) ? intval($m['status']) : 0;
+                $data = wp_json_encode($m);
+
+                if ($moodle_enrol_id && $enrol_plugin) {
+                    $wpdb->query($wpdb->prepare(
+                        "INSERT INTO $table (moodle_enrol_id, moodle_course_id, enrol_plugin, name, status, data)
+                         VALUES (%d, %d, %s, %s, %d, %s)
+                         ON DUPLICATE KEY UPDATE enrol_plugin = %s, name = %s, status = %d, data = %s",
+                        $moodle_enrol_id,
+                        $course_id,
+                        $enrol_plugin,
+                        $name,
+                        $status,
+                        $data,
+                        $enrol_plugin,
+                        $name,
+                        $status,
+                        $data
+                    ));
+                    $count++;
+                }
+            }
+
+            wp_send_json_success(array(
+                'message' => sprintf(__('%d métodos de enrol sincronizados!', 'moodle-management'), $count)
+            ));
+        } catch (Exception $e) {
+            wp_send_json_error(array('message' => $e->getMessage()));
+        }
     }
 }

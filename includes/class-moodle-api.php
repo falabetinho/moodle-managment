@@ -137,6 +137,15 @@ class Moodle_API {
     }
 
     /**
+     * Get enrolment methods for a course
+     */
+    public function get_course_enrolment_methods($course_id) {
+        return $this->call('core_enrol_get_course_enrolment_methods', array(
+            'courseid' => (int) $course_id
+        ));
+    }
+
+    /**
      * Save connection settings
      */
     public static function save_settings($base_url, $username, $token) {
