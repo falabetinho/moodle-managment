@@ -96,7 +96,7 @@ class Moodle_Admin_Tabs {
             <h2><?php echo esc_html(__('Configuração de Conexão ao Moodle', 'moodle-management')); ?></h2>
             
             <form id="moodle-connection-form" method="post" action="">
-                <?php wp_nonce_field('moodle_connection_nonce', 'moodle_nonce'); ?>
+                <?php wp_nonce_field('moodle_management_nonce', 'nonce'); ?>
                 
                 <table class="form-table">
                     <tr>
@@ -338,7 +338,7 @@ class Moodle_Admin_Tabs {
      * AJAX: Save connection settings
      */
     public function ajax_save_settings() {
-        check_ajax_referer('moodle_connection_nonce', 'nonce');
+        check_ajax_referer('moodle_management_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
             wp_die(esc_html(__('Sem permissão', 'moodle-management')));

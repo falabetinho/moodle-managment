@@ -2,10 +2,10 @@ jQuery(function($) {
     'use strict';
 
     // Save connection settings
-    $('#save-settings').on('click', function(e) {
+    $('#moodle-connection-form').on('submit', function(e) {
         e.preventDefault();
 
-        var $form = $('#moodle-connection-form');
+        var $form = $(this);
         var $resultDiv = $('#connection-result');
 
         $.ajax({
@@ -13,13 +13,13 @@ jQuery(function($) {
             url: moodleManagement.ajaxurl,
             data: {
                 action: 'moodle_save_settings',
-                nonce: moodleManagement.nonce,
+                nonce: $form.find('input[name="nonce"]').val(),
                 base_url: $('#moodle_base_url').val(),
                 username: $('#moodle_username').val(),
                 token: $('#moodle_token').val()
             },
             beforeSend: function() {
-                $('#save-settings').prop('disabled', true).text('Salvando...');
+                $form.find('button[type="submit"]').prop('disabled', true).text('Salvando...');
             },
             success: function(response) {
                 $resultDiv
@@ -37,7 +37,7 @@ jQuery(function($) {
                     .show();
             },
             complete: function() {
-                $('#save-settings').prop('disabled', false).text('Salvar Configurações');
+                $form.find('button[type="submit"]').prop('disabled', false).text('Salvar Configurações');
             }
         });
     });
@@ -64,7 +64,7 @@ jQuery(function($) {
             url: moodleManagement.ajaxurl,
             data: {
                 action: 'moodle_save_settings',
-                nonce: moodleManagement.nonce,
+                nonce: $('#moodle-connection-form').find('input[name="nonce"]').val(),
                 base_url: $('#moodle_base_url').val(),
                 username: $('#moodle_username').val(),
                 token: $('#moodle_token').val()
