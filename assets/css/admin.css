@@ -1,0 +1,181 @@
+.moodle-management-wrap {
+    max-width: 1200px;
+    margin-top: 20px;
+}
+
+.moodle-management-wrap h1 {
+    margin-bottom: 20px;
+}
+
+.nav-tab-wrapper {
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 20px;
+}
+
+.nav-tab {
+    padding: 10px 15px;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    margin-right: 5px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease;
+}
+
+.nav-tab:hover {
+    background-color: #efefef;
+}
+
+.nav-tab-active {
+    background-color: #fff;
+    border-bottom: 1px solid #fff;
+    color: #0073aa;
+    font-weight: bold;
+}
+
+.tab-content {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 0 4px 4px 4px;
+    padding: 20px;
+}
+
+.moodle-tab-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #0073aa;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.moodle-tab-content .form-table {
+    width: 100%;
+}
+
+.moodle-tab-content .form-table th {
+    text-align: left;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.moodle-tab-content .form-table td {
+    padding: 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.moodle-tab-content input[type="text"],
+.moodle-tab-content input[type="url"],
+.moodle-tab-content input[type="password"] {
+    width: 100%;
+    max-width: 400px;
+}
+
+.moodle-tab-content .regular-text {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.moodle-tab-content .description {
+    color: #666;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.moodle-tab-content .submit {
+    margin-top: 20px;
+}
+
+.moodle-tab-content .button {
+    padding: 8px 16px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.moodle-tab-content .button-primary {
+    background-color: #0073aa;
+    border-color: #004d7a;
+    color: #fff;
+    cursor: pointer;
+}
+
+.moodle-tab-content .button-primary:hover {
+    background-color: #005a87;
+}
+
+.notice {
+    padding: 12px;
+    margin: 20px 0;
+    border-left: 4px solid;
+    border-radius: 4px;
+}
+
+.notice.notice-success {
+    border-left-color: #28a745;
+    background-color: #f1f8f4;
+    color: #1e7e34;
+}
+
+.notice.notice-error {
+    border-left-color: #d32f2f;
+    background-color: #f8f1f1;
+    color: #7d1e1e;
+}
+
+.notice.notice-info {
+    border-left-color: #0073aa;
+    background-color: #f1f7fb;
+    color: #00355f;
+}
+
+.wp-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.wp-list-table thead th {
+    background-color: #f9f9f9;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #e0e0e0;
+    font-weight: bold;
+}
+
+.wp-list-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.wp-list-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+.widefat.striped tbody tr:nth-child(odd) {
+    background-color: #fff;
+}
+
+.widefat.striped tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin: 0 5px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
