@@ -242,4 +242,57 @@ jQuery(function($) {
             }
         });
     });
+
+    // Sync all enrol methods from all courses
+    $('#sync-all-enrol-methods').on('click', function(e) {
+        e.preventDefault();
+
+        var $button = $(this);
+        var $resultDiv = $('#sync-all-enrol-result');
+
+        if (!confirm('Isso irá sincronizar os métodos de enrol de todos os cursos. Pode levar alguns minutos. Deseja continuar?')) {
+            return;
+        }
+
+        $.ajax({
+            type: 'POST',
+            url: moodleManagement.ajaxurl,
+            data: {
+                action: 'moodle_sync_all_enrol_methods',
+                nonce: moodleManagement.nonce
+            },
+            timeout: 300000, // 5 minutes timeout
+            beforeSend: function() {
+                $button.prop('disabled', true).text('Sincronizando... Isso pode levar alguns minutos.');
+                $resultDiv
+                    .removeClass('notice-success notice-error')
+                    .addClass('notice notice-info')
+                    .html('<p>Sincronizando métodos de enrol de todos os cursos...</p>')
+                    .show();
+            },
+            success: function(response) {
+                $resultDiv
+                    .removeClass('notice-error notice-info')
+                    .addClass('notice notice-success')
+                    .html('<p>' + response.data.message + '</p>')
+                    .show();
+
+                // Reload page after 3 seconds
+                setTimeout(function() {
+                    location.reload();
+                }, 3000);
+            },
+            error: function(response) {
+                var errorMsg = response.responseJSON?.data?.message || 'Erro ao sincronizar métodos de enrol';
+                $resultDiv
+                    .removeClass('notice-success notice-info')
+                    .addClass('notice notice-error')
+                    .html('<p>' + errorMsg + '</p>')
+                    .show();
+            },
+            complete: function() {
+                $button.prop('disabled', false).text('Sincronizar Todos os Enrol de Todos os Cursos');
+            }
+        });
+    });
 });

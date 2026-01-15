@@ -39,6 +39,7 @@ class Moodle_Admin_Tabs {
         add_action('wp_ajax_moodle_sync_categories', array($this, 'ajax_sync_categories'));
         add_action('wp_ajax_moodle_sync_courses', array($this, 'ajax_sync_courses'));
         add_action('wp_ajax_moodle_sync_enrol_methods', array($this, 'ajax_sync_enrol_methods'));
+        add_action('wp_ajax_moodle_sync_all_enrol_methods', array($this, 'ajax_sync_all_enrol_methods'));
     }
 
     /**
@@ -324,6 +325,18 @@ class Moodle_Admin_Tabs {
         <div class="moodle-tab-content">
             <h2><?php echo esc_html(__('Importar Métodos de Enrol do Moodle', 'moodle-management')); ?></h2>
 
+            <p style="margin-bottom: 20px;">
+                <button type="button" class="button button-secondary" id="sync-all-enrol-methods">
+                    <?php echo esc_html(__('Sincronizar Todos os Enrol de Todos os Cursos', 'moodle-management')); ?>
+                </button>
+            </p>
+
+            <div id="sync-all-enrol-result" class="notice" style="display:none;"></div>
+
+            <hr style="margin: 20px 0;">
+
+            <h3><?php echo esc_html(__('Sincronizar Enrol de um Curso Específico', 'moodle-management')); ?></h3>
+
             <form method="get" action="">
                 <input type="hidden" name="page" value="moodle-management" />
                 <input type="hidden" name="tab" value="enrol" />
@@ -498,18 +511,20 @@ class Moodle_Admin_Tabs {
             $count = 0;
             foreach ($courses as $course) {
                 $wpdb->query($wpdb->prepare(
-                    "INSERT INTO $table (moodle_id, name, shortname, description, category_id) 
-                     VALUES (%d, %s, %s, %s, %d)
-                     ON DUPLICATE KEY UPDATE name = %s, shortname = %s, description = %s, category_id = %d",
+                    "INSERT INTO $table (moodle_id, name, shortname, description, category_id, visibility) 
+                     VALUES (%d, %s, %s, %s, %d, %d)
+                     ON DUPLICATE KEY UPDATE name = %s, shortname = %s, description = %s, category_id = %d, visibility = %d",
                     $course['id'],
                     $course['fullname'],
                     $course['shortname'],
                     isset($course['summary']) ? $course['summary'] : '',
                     isset($course['categoryid']) ? $course['categoryid'] : 0,
+                    isset($course['visible']) ? intval($course['visible']) : 1,
                     $course['fullname'],
                     $course['shortname'],
                     isset($course['summary']) ? $course['summary'] : '',
-                    isset($course['categoryid']) ? $course['categoryid'] : 0
+                    isset($course['categoryid']) ? $course['categoryid'] : 0,
+                    isset($course['visible']) ? intval($course['visible']) : 1
                 ));
                 $count++;
             }
@@ -629,6 +644,146 @@ class Moodle_Admin_Tabs {
             wp_send_json_success(array(
                 'message' => sprintf(__('%d métodos de enrol sincronizados!', 'moodle-management'), $count)
             ));
+        } catch (Exception $e) {
+            wp_send_json_error(array('message' => $e->getMessage()));
+        }
+    }
+
+    /**
+     * AJAX: Sync all enrol methods from all courses
+     */
+    public function ajax_sync_all_enrol_methods() {
+        check_ajax_referer('moodle_management_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html(__('Sem permissão', 'moodle-management')));
+        }
+
+        try {
+            $api = new Moodle_API();
+            if (!$api->is_configured()) {
+                wp_send_json_error(array('message' => __('Conexão não configurada', 'moodle-management')));
+            }
+
+            global $wpdb;
+            $courses_table = $wpdb->prefix . 'moodle_courses';
+            $enrol_table = $wpdb->prefix . 'moodle_enrol_methods';
+
+            // Get all courses from database
+            $courses = $wpdb->get_results("SELECT moodle_id FROM $courses_table");
+            
+            if (empty($courses)) {
+                wp_send_json_error(array('message' => __('Nenhum curso encontrado. Sincronize os cursos primeiro.', 'moodle-management')));
+            }
+
+            $total_count = 0;
+            $total_courses = 0;
+            $errors = array();
+
+            foreach ($courses as $course) {
+                try {
+                    $methods = $api->get_course_enrolment_methods($course->moodle_id);
+                    $course_count = 0;
+
+                    foreach ($methods as $m) {
+                        // Map all known fields from the API response
+                        $moodle_enrol_id = isset($m['id']) ? intval($m['id']) : 0;
+                        $enrol_plugin = isset($m['enrol']) ? sanitize_text_field($m['enrol']) : '';
+                        $name = isset($m['name']) ? sanitize_text_field($m['name']) : '';
+                        $status = isset($m['status']) ? intval($m['status']) : 0;
+                        $roleid = isset($m['roleid']) ? intval($m['roleid']) : null;
+                        $cost = isset($m['cost']) ? floatval($m['cost']) : null;
+                        $currency = isset($m['currency']) ? sanitize_text_field($m['currency']) : null;
+                        $enrolstartdate = isset($m['enrolstartdate']) ? intval($m['enrolstartdate']) : null;
+                        $enrolenddate = isset($m['enrolenddate']) ? intval($m['enrolenddate']) : null;
+                        $enrolperiod = isset($m['enrolperiod']) ? intval($m['enrolperiod']) : null;
+                        $expirynotify = isset($m['expirynotify']) ? intval($m['expirynotify']) : null;
+                        $expirythreshold = isset($m['expirythreshold']) ? intval($m['expirythreshold']) : null;
+                        $notifyall = isset($m['notifyall']) ? intval($m['notifyall']) : null;
+                        $category_id = isset($m['category_id']) ? intval($m['category_id']) : null;
+                        $default_status_id = isset($m['default_status_id']) ? intval($m['default_status_id']) : null;
+                        $is_enrollment_fee = isset($m['is_enrollment_fee']) ? intval($m['is_enrollment_fee']) : 0;
+                        $installments = isset($m['installments']) ? intval($m['installments']) : null;
+                        $data = wp_json_encode($m);
+
+                        if ($moodle_enrol_id && $enrol_plugin) {
+                            $wpdb->query($wpdb->prepare(
+                                "INSERT INTO $enrol_table (
+                                    moodle_enrol_id, moodle_course_id, enrol_plugin, name, status,
+                                    roleid, cost, currency, enrolstartdate, enrolenddate, enrolperiod,
+                                    expirynotify, expirythreshold, notifyall, category_id, default_status_id,
+                                    is_enrollment_fee, installments, data
+                                )
+                                 VALUES (%d, %d, %s, %s, %d, %d, %f, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s)
+                                 ON DUPLICATE KEY UPDATE 
+                                    enrol_plugin = %s, name = %s, status = %d,
+                                    roleid = %d, cost = %f, currency = %s, enrolstartdate = %d, enrolenddate = %d,
+                                    enrolperiod = %d, expirynotify = %d, expirythreshold = %d, notifyall = %d,
+                                    category_id = %d, default_status_id = %d, is_enrollment_fee = %d, installments = %d, data = %s",
+                                $moodle_enrol_id,
+                                $course->moodle_id,
+                                $enrol_plugin,
+                                $name,
+                                $status,
+                                $roleid,
+                                $cost,
+                                $currency,
+                                $enrolstartdate,
+                                $enrolenddate,
+                                $enrolperiod,
+                                $expirynotify,
+                                $expirythreshold,
+                                $notifyall,
+                                $category_id,
+                                $default_status_id,
+                                $is_enrollment_fee,
+                                $installments,
+                                $data,
+                                $enrol_plugin,
+                                $name,
+                                $status,
+                                $roleid,
+                                $cost,
+                                $currency,
+                                $enrolstartdate,
+                                $enrolenddate,
+                                $enrolperiod,
+                                $expirynotify,
+                                $expirythreshold,
+                                $notifyall,
+                                $category_id,
+                                $default_status_id,
+                                $is_enrollment_fee,
+                                $installments,
+                                $data
+                            ));
+                            $course_count++;
+                        }
+                    }
+
+                    if ($course_count > 0) {
+                        $total_count += $course_count;
+                        $total_courses++;
+                    }
+                } catch (Exception $e) {
+                    $errors[] = sprintf(__('Curso ID %d: %s', 'moodle-management'), $course->moodle_id, $e->getMessage());
+                }
+            }
+
+            $message = sprintf(
+                __('%d métodos de enrol sincronizados de %d cursos!', 'moodle-management'),
+                $total_count,
+                $total_courses
+            );
+
+            if (!empty($errors)) {
+                $message .= ' ' . __('Erros:', 'moodle-management') . ' ' . implode('; ', array_slice($errors, 0, 3));
+                if (count($errors) > 3) {
+                    $message .= sprintf(__(' (e mais %d erros)', 'moodle-management'), count($errors) - 3);
+                }
+            }
+
+            wp_send_json_success(array('message' => $message));
         } catch (Exception $e) {
             wp_send_json_error(array('message' => $e->getMessage()));
         }

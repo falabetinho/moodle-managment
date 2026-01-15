@@ -200,6 +200,7 @@ class Moodle_Management {
                 shortname varchar(100),
                 description longtext,
                 category_id int(11),
+                visibility int(1) DEFAULT 1,
                 imported int(1) DEFAULT 0,
                 created_at datetime DEFAULT CURRENT_TIMESTAMP,
                 updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -265,6 +266,32 @@ class Moodle_Management {
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
+        
+        // Run migrations
+        self::run_migrations();
+    }
+
+    /**
+     * Run database migrations
+     */
+    private static function run_migrations() {
+        global $wpdb;
+        
+        $table_courses = $wpdb->prefix . 'moodle_courses';
+        
+        // Check if visibility column exists, if not add it
+        $column_exists = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'visibility'",
+                DB_NAME,
+                $table_courses
+            )
+        );
+        
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_courses ADD COLUMN visibility int(1) DEFAULT 1 AFTER category_id");
+        }
     }
 
     /**
