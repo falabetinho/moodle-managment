@@ -25,7 +25,6 @@ class Moodle_Admin_Tabs {
             'categories' => __('Gerenciar Categorias', 'moodle-management'),
             'courses' => __('Importar Cursos', 'moodle-management'),
             'enrol' => __('Importar Métodos de Enrol', 'moodle-management'),
-            'category_colors' => __('Cores das Categorias', 'moodle-management'),
         );
         
         $this->init_hooks();
@@ -101,9 +100,6 @@ class Moodle_Admin_Tabs {
                         break;
                     case 'enrol':
                         $this->render_enrol_tab();
-                        break;
-                    case 'category_colors':
-                        do_action('moodle_management_render_tab_category_colors');
                         break;
                 }
                 ?>

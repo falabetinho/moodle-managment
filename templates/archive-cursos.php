@@ -239,10 +239,20 @@ if ($shortcode_category_id) {
 
                                 <!-- Conteúdo sobre a imagem -->
                                 <div class="course-card-header">
-                                    <?php if ($category) : ?>
-                                        <span class="course-category-badge">
-                                            <?php echo esc_html($category->name); ?>
-                                        </span>
+                                    <div class="course-card-header-left">
+                                        <?php if ($category) : ?>
+                                            <span class="course-category-badge">
+                                                <?php echo esc_html($category->name); ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <?php if ($is_promotional) : ?>
+                                        <div class="course-card-header-right">
+                                            <span class="promotion-badge-corner">
+                                                <i class="fas fa-tag"></i> <?php echo esc_html(__('Promoção', 'moodle-management')); ?>
+                                            </span>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
 
@@ -253,12 +263,7 @@ if ($shortcode_category_id) {
                                     
                                     <?php if ($display_price !== null && $display_price > 0) : ?>
                                         <div class="course-card-price">
-                                            <?php if ($is_promotional) : ?>
-                                                <span class="promotion-badge">
-                                                    <i class="fas fa-tag"></i> <?php echo esc_html(__('Promoção', 'moodle-management')); ?>
-                                                </span>
-                                            <?php endif; ?>
-                                            <div class="course-price">
+                                            <div class="course-price-badge">
                                                 <?php 
                                                 $installments = !empty($price_info->installments) ? intval($price_info->installments) : 1;
                                                 $price_message = Moodle_Settings::format_price($display_price, $installments);
@@ -292,7 +297,54 @@ if ($shortcode_category_id) {
                                 $base_url = add_query_arg('busca', $search_term, $base_url);
                             }
 
-                            for ($i = 1; $i <= $max_pages; $i++) {
+                            // Configuração de paginação com máximo de 6 links
+                            $max_visible_pages = 6;
+                            $start_page = 1;
+                            $end_page = $max_pages;
+
+                            // Calcular range de páginas visíveis
+                            if ($max_pages > $max_visible_pages) {
+                                $half = floor($max_visible_pages / 2);
+                                
+                                if ($paged <= $half + 1) {
+                                    // Início da paginação
+                                    $start_page = 1;
+                                    $end_page = $max_visible_pages;
+                                } elseif ($paged >= $max_pages - $half) {
+                                    // Fim da paginação
+                                    $start_page = $max_pages - $max_visible_pages + 1;
+                                    $end_page = $max_pages;
+                                } else {
+                                    // Meio da paginação - página atual no centro
+                                    $start_page = $paged - $half;
+                                    $end_page = $paged + $half;
+                                }
+                            }
+
+                            // Link "Anterior"
+                            if ($paged > 1) {
+                                $prev_url = add_query_arg('paged', $paged - 1, $base_url);
+                                echo sprintf(
+                                    '<a class="page-numbers prev" href="%s"><i class="fas fa-chevron-left"></i> %s</a>',
+                                    esc_url($prev_url),
+                                    esc_html(__('Anterior', 'moodle-management'))
+                                );
+                            }
+
+                            // Primeira página + reticências
+                            if ($start_page > 1) {
+                                $first_url = add_query_arg('paged', 1, $base_url);
+                                echo sprintf(
+                                    '<a class="page-numbers" href="%s">1</a>',
+                                    esc_url($first_url)
+                                );
+                                if ($start_page > 2) {
+                                    echo '<span class="page-numbers dots">...</span>';
+                                }
+                            }
+
+                            // Páginas numeradas
+                            for ($i = $start_page; $i <= $end_page; $i++) {
                                 $pagination_url = add_query_arg('paged', $i, $base_url);
                                 $class = $i === $paged ? 'current' : '';
                                 
@@ -305,6 +357,29 @@ if ($shortcode_category_id) {
                                         $i
                                     );
                                 }
+                            }
+
+                            // Reticências + última página
+                            if ($end_page < $max_pages) {
+                                if ($end_page < $max_pages - 1) {
+                                    echo '<span class="page-numbers dots">...</span>';
+                                }
+                                $last_url = add_query_arg('paged', $max_pages, $base_url);
+                                echo sprintf(
+                                    '<a class="page-numbers" href="%s">%d</a>',
+                                    esc_url($last_url),
+                                    $max_pages
+                                );
+                            }
+
+                            // Link "Próximo"
+                            if ($paged < $max_pages) {
+                                $next_url = add_query_arg('paged', $paged + 1, $base_url);
+                                echo sprintf(
+                                    '<a class="page-numbers next" href="%s">%s <i class="fas fa-chevron-right"></i></a>',
+                                    esc_url($next_url),
+                                    esc_html(__('Próximo', 'moodle-management'))
+                                );
                             }
                             ?>
                         </div>
@@ -570,7 +645,7 @@ if ($shortcode_category_id) {
                     rgba(0, 0, 0, 0.8) 100%);
             }
 
-            /* ====== CARD HEADER (CATEGORY BADGE) ====== */
+            /* ====== CARD HEADER (CATEGORY BADGE + PROMOTION) ====== */
             .course-card-header {
                 position: absolute;
                 top: 0;
@@ -578,6 +653,17 @@ if ($shortcode_category_id) {
                 right: 0;
                 padding: 16px;
                 z-index: 2;
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+            }
+
+            .course-card-header-left {
+                flex: 1;
+            }
+
+            .course-card-header-right {
+                flex-shrink: 0;
             }
 
             /* ====== CATEGORY BADGE ====== */
@@ -626,7 +712,7 @@ if ($shortcode_category_id) {
 
             .course-title {
                 margin: 0;
-                font-size: 22px;
+                font-size: 1.3rem;
                 line-height: 1.3;
                 color: #fff;
                 font-weight: 700;
@@ -634,20 +720,28 @@ if ($shortcode_category_id) {
                 text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
             }
 
-            /* ====== COURSE PRICE (ABAIXO DO TÍTULO) ====== */
+            /* ====== COURSE PRICE (EFEITO ACRÍLICO) ====== */
             .course-card-price {
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
             }
 
-            .course-price {
+            .course-price-badge {
+                display: inline-block;
+                background: rgba(255, 255, 255, 0.15);
+                color: #fff;
+                padding: 10px 16px;
+                border-radius: 8px;
                 font-size: 16px;
                 font-weight: 700;
-                color: #fff;
                 letter-spacing: 0.3px;
-                text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-                margin: 0;
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+                width: fit-content;
+                text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
             }
 
             /* ====== COURSE HEADER (LEGACY - HIDDEN) ====== */
@@ -676,57 +770,47 @@ if ($shortcode_category_id) {
                 font-weight: 600;
             }
 
-            /* ====== COURSE FOOTER ====== */
+            /* ====== COURSE FOOTER (HIDDEN) ====== */
             .course-footer {
-                padding: 20px;
-                background: var(--neutral-surface);
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                border-top: 1px solid rgba(0, 0, 0, 0.06);
+                display: none;
             }
 
             .course-price-wrapper {
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                align-items: flex-start;
-                min-height: 32px;
-                justify-content: center;
+                display: none;
             }
 
-            /* ====== PROMOTION BADGE ====== */
-            .promotion-badge {
+            /* ====== PROMOTION BADGE (CANTO SUPERIOR DIREITO) ====== */
+            .promotion-badge-corner {
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                background: linear-gradient(135deg, #da3b01 0%, #ea4300 100%);
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
                 color: #fff;
                 padding: 8px 14px;
-                border-radius: 6px;
-                font-size: 11px;
+                border-radius: 8px;
+                font-size: 12px;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.8px;
-                box-shadow: 0 4px 12px rgba(218, 59, 1, 0.3);
-                animation: pulse 2s ease-in-out infinite;
+                box-shadow: 0 4px 16px rgba(220, 53, 69, 0.5);
+                animation: pulsePromo 2s ease-in-out infinite;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
             }
 
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.8; }
+            @keyframes pulsePromo {
+                0%, 100% { 
+                    opacity: 1;
+                    transform: scale(1);
+                }
+                50% { 
+                    opacity: 0.9;
+                    transform: scale(1.05);
+                }
             }
 
-            .promotion-badge i {
-                font-size: 12px;
-            }
-
-            /* ====== COURSE PRICE ====== */
-            .course-price {
-                font-size: 14px;
-                font-weight: 700;
-                color: #107c10;
-                letter-spacing: 0.5px;
+            .promotion-badge-corner i {
+                font-size: 13px;
             }
 
             /* ====== NO COURSES FOUND ====== */
@@ -751,6 +835,7 @@ if ($shortcode_category_id) {
                 padding: 20px;
                 display: flex;
                 justify-content: center;
+                align-items: center;
                 flex-wrap: wrap;
                 gap: 8px;
             }
@@ -770,6 +855,7 @@ if ($shortcode_category_id) {
                 font-weight: 500;
                 transition: var(--transition);
                 background: var(--neutral-surface);
+                gap: 6px;
             }
 
             .courses-pagination a:hover {
@@ -785,6 +871,21 @@ if ($shortcode_category_id) {
                 border-color: var(--primary-color);
                 font-weight: 600;
                 box-shadow: var(--shadow-md);
+            }
+
+            .courses-pagination span.page-numbers.dots {
+                border: none;
+                background: transparent;
+                color: #999;
+                min-width: auto;
+                padding: 10px 4px;
+                cursor: default;
+            }
+
+            .courses-pagination a.prev,
+            .courses-pagination a.next {
+                font-weight: 600;
+                padding: 10px 16px;
             }
 
             /* ====== MOBILE STYLES ====== */
