@@ -89,7 +89,7 @@ class Moodle_Courses {
         if (!$include_subcategories) {
             // Apenas cursos da categoria especificada
             return $wpdb->get_results($wpdb->prepare(
-                "SELECT * FROM $courses_table WHERE category_id = %d ORDER BY name ASC",
+                "SELECT * FROM $courses_table WHERE category_id = %d AND visibility = 1 ORDER BY name ASC",
                 $category_id
             ));
         }
@@ -245,7 +245,7 @@ class Moodle_Courses {
         global $wpdb;
         $courses_table = $wpdb->prefix . 'moodle_courses';
         
-        $query = "SELECT * FROM $courses_table ORDER BY name ASC";
+        $query = "SELECT * FROM $courses_table WHERE visibility = 1 ORDER BY name ASC";
         
         if ($limit !== null) {
             $query .= $wpdb->prepare(" LIMIT %d OFFSET %d", $limit, $offset);
@@ -261,7 +261,7 @@ class Moodle_Courses {
         global $wpdb;
         $courses_table = $wpdb->prefix . 'moodle_courses';
         
-        return $wpdb->get_var("SELECT COUNT(*) FROM $courses_table");
+        return $wpdb->get_var("SELECT COUNT(*) FROM $courses_table WHERE visibility = 1");
     }
 
     /**

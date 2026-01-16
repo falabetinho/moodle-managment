@@ -564,6 +564,12 @@ class Moodle_Admin_Tabs {
             global $wpdb;
             $table = $wpdb->prefix . 'moodle_enrol_methods';
 
+            // Deletar todos os métodos de enrol anteriores para este curso
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM $table WHERE moodle_course_id = %d",
+                $course_id
+            ));
+
             $count = 0;
             foreach ($methods as $m) {
                 // Map all known fields from the API response
@@ -594,31 +600,9 @@ class Moodle_Admin_Tabs {
                             expirynotify, expirythreshold, notifyall, category_id, default_status_id,
                             is_enrollment_fee, installments, data
                         )
-                         VALUES (%d, %d, %s, %s, %d, %d, %f, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s)
-                         ON DUPLICATE KEY UPDATE 
-                            enrol_plugin = %s, name = %s, status = %d,
-                            roleid = %d, cost = %f, currency = %s, enrolstartdate = %d, enrolenddate = %d,
-                            enrolperiod = %d, expirynotify = %d, expirythreshold = %d, notifyall = %d,
-                            category_id = %d, default_status_id = %d, is_enrollment_fee = %d, installments = %d, data = %s",
+                         VALUES (%d, %d, %s, %s, %d, %d, %f, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s)",
                         $moodle_enrol_id,
                         $course_id,
-                        $enrol_plugin,
-                        $name,
-                        $status,
-                        $roleid,
-                        $cost,
-                        $currency,
-                        $enrolstartdate,
-                        $enrolenddate,
-                        $enrolperiod,
-                        $expirynotify,
-                        $expirythreshold,
-                        $notifyall,
-                        $category_id,
-                        $default_status_id,
-                        $is_enrollment_fee,
-                        $installments,
-                        $data,
                         $enrol_plugin,
                         $name,
                         $status,
@@ -669,6 +653,9 @@ class Moodle_Admin_Tabs {
             $courses_table = $wpdb->prefix . 'moodle_courses';
             $enrol_table = $wpdb->prefix . 'moodle_enrol_methods';
 
+            // Deletar todos os métodos de enrol existentes
+            $wpdb->query("TRUNCATE TABLE $enrol_table");
+
             // Get all courses from database
             $courses = $wpdb->get_results("SELECT moodle_id FROM $courses_table");
             
@@ -714,31 +701,9 @@ class Moodle_Admin_Tabs {
                                     expirynotify, expirythreshold, notifyall, category_id, default_status_id,
                                     is_enrollment_fee, installments, data
                                 )
-                                 VALUES (%d, %d, %s, %s, %d, %d, %f, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s)
-                                 ON DUPLICATE KEY UPDATE 
-                                    enrol_plugin = %s, name = %s, status = %d,
-                                    roleid = %d, cost = %f, currency = %s, enrolstartdate = %d, enrolenddate = %d,
-                                    enrolperiod = %d, expirynotify = %d, expirythreshold = %d, notifyall = %d,
-                                    category_id = %d, default_status_id = %d, is_enrollment_fee = %d, installments = %d, data = %s",
+                                 VALUES (%d, %d, %s, %s, %d, %d, %f, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s)",
                                 $moodle_enrol_id,
                                 $course->moodle_id,
-                                $enrol_plugin,
-                                $name,
-                                $status,
-                                $roleid,
-                                $cost,
-                                $currency,
-                                $enrolstartdate,
-                                $enrolenddate,
-                                $enrolperiod,
-                                $expirynotify,
-                                $expirythreshold,
-                                $notifyall,
-                                $category_id,
-                                $default_status_id,
-                                $is_enrollment_fee,
-                                $installments,
-                                $data,
                                 $enrol_plugin,
                                 $name,
                                 $status,
