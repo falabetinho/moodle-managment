@@ -24,6 +24,11 @@ Plugin WordPress para gerenciar a integração com Moodle, permitindo sincroniza
 - Visualizar lista de enrollments
 - Rastrear role e método de inscrição
 
+### 5. Personalizar Cores das Categorias
+- Customizar cores dos cards por categoria
+- Interface visual com preview de cores
+- Suporte a dark mode automático
+
 ## Estrutura do Plugin
 
 ```
@@ -61,6 +66,10 @@ Exibe a lista de cursos com filtros, busca e paginação.
 - `show_subcategories` (true/false) - Mostra subcategorias da categoria selecionada. Padrão: `true`
 - `show_title` (true/false) - Exibe um título acima dos cursos. Padrão: `false`
 - `title` (texto) - Título customizado a exibir (requer `show_title="true"`). Se não informado, usa o título da página
+- `color_scheme` (auto|category|custom) - Define o esquema de cores para os cards. Padrão: `auto`
+  - `auto` - Gera cores automáticas baseadas no ID do curso (cores consistentes)
+  - `category` - Usa cores baseadas na categoria do curso (em desenvolvimento)
+  - `custom` - Usa cores customizadas do metadado do curso (em desenvolvimento)
 
 **Exemplos:**
 
@@ -82,6 +91,9 @@ Exibe a lista de cursos com filtros, busca e paginação.
 
 [moodle_cursos category_id="5" show_title="true" title="Cursos de Python"]
 <!-- Exibe cursos da categoria 5 com título customizado -->
+
+[moodle_cursos color_scheme="auto"]
+<!-- Usa esquema de cores automático (padrão) -->
 ```
 
 ## Configuração

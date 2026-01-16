@@ -374,6 +374,7 @@ class Moodle_Courses {
             'show_subcategories' => true,
             'show_title' => false,
             'title' => '',
+            'color_scheme' => 'auto',
         ), $atts, 'moodle_cursos');
 
         // Armazenar parâmetros para usar no template
@@ -387,4 +388,57 @@ class Moodle_Courses {
         include MOODLE_MANAGEMENT_PATH . 'templates/archive-cursos.php';
         return ob_get_clean();
     }
+
+    /**
+     * Generate gradient colors for a course
+     * 
+     * Supports color schemes:
+     * - 'auto': Generate based on course ID (consistent colors)
+     * - 'category': Use category colors
+     * - 'custom': Use custom colors from course meta
+     * 
+     * @param int $course_id Course ID
+     * @param string $color_scheme Color scheme type
+     * @return string CSS gradient value
+     */
+    public static function generate_course_gradient($course_id, $color_scheme = 'auto') {
+        // Usar semente baseada no ID para cores consistentes
+        srand(crc32($course_id));
+        $hue1 = mt_rand(0, 360);
+        $hue2 = ($hue1 + mt_rand(30, 120)) % 360;
+        $color1 = sprintf('hsl(%d, 70%%, 60%%)', $hue1);
+        $color2 = sprintf('hsl(%d, 70%%, 40%%)', $hue2);
+
+        return sprintf('linear-gradient(135deg, %s 0%%, %s 100%%)', $color1, $color2);
+    }
+
+    /**
+     * Get course gradient with optional color customization
+     * Attempts to get custom colors from course meta, falls back to category colors, then to generated
+     * 
+     * @param int $course_id Moodle course ID
+     * @param string $color_scheme Color scheme ('auto', 'category', 'custom')
+     * @return string CSS gradient value
+     */
+    public static function get_course_gradient($course_id, $color_scheme = 'auto') {
+        // Try to get category colors if color_scheme is 'category'
+        if ($color_scheme === 'category') {
+            $course = get_post($course_id);
+            if ($course && !empty($course->category_id)) {
+                require_once MOODLE_MANAGEMENT_PATH . 'admin/class-category-colors.php';
+                $colors = Moodle_Category_Colors::get_category_colors($course->category_id);
+                if ($colors['color1'] && $colors['color2']) {
+                    return sprintf(
+                        'linear-gradient(135deg, %s 0%%, %s 100%%)',
+                        esc_attr($colors['color1']),
+                        esc_attr($colors['color2'])
+                    );
+                }
+            }
+        }
+        
+        // Default to generated gradient
+        return self::generate_course_gradient($course_id, $color_scheme);
+    }
 }
+

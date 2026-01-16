@@ -27,12 +27,14 @@ require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-management.php';
 require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-api.php';
 require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-courses.php';
 require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-settings.php';
+require_once MOODLE_MANAGEMENT_PATH . 'admin/class-category-colors.php';
 
 // Initialize the plugin
 function moodle_management_init() {
     Moodle_Management::get_instance();
     new Moodle_Courses();
     new Moodle_Settings();
+    new Moodle_Category_Colors();
 }
 add_action('plugins_loaded', 'moodle_management_init');
 

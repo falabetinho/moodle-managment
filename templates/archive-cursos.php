@@ -200,21 +200,16 @@ if ($shortcode_category_id) {
                                 $display_price = $total_cost / $installments;
                             }
                             ?>
-                            <div class="course-card">
-                                <?php
-                                // Gerar padrão aleatório baseado no ID do curso
-                                $pattern_id = $course->moodle_id % 5;
-                                $color1 = sprintf('#%06X', mt_rand(0, 0xFFFFFF) & 0xFFFFFF);
-                                $color2 = sprintf('#%06X', mt_rand(0, 0xFFFFFF) & 0xFFFFFF);
-                                
-                                // Usar semente baseada no ID para cores consistentes
-                                srand(crc32($course->moodle_id));
-                                $hue1 = mt_rand(0, 360);
-                                $hue2 = ($hue1 + mt_rand(30, 120)) % 360;
-                                $color1 = sprintf('hsl(%d, 70%%, 60%%)', $hue1);
-                                $color2 = sprintf('hsl(%d, 70%%, 40%%)', $hue2);
-                                ?>
-                                <div class="course-image" style="background: linear-gradient(135deg, <?php echo esc_attr($color1); ?> 0%, <?php echo esc_attr($color2); ?> 100%);">
+                            <?php
+                            // Gerar cores baseadas no ID do curso para consistência
+                            $pattern_id = $course->moodle_id % 5;
+                            $color_scheme = !empty($moodle_cursos_shortcode_atts['color_scheme']) ? $moodle_cursos_shortcode_atts['color_scheme'] : 'auto';
+                            $gradient = Moodle_Courses::get_course_gradient($course->moodle_id, $color_scheme);
+                            $cardStyle = "--course-gradient: {$gradient};";
+                            ?>
+                            <div class="course-card" style="<?php echo esc_attr($cardStyle); ?>">
+                                <!-- Background com padrão -->
+                                <div class="course-card-image">
                                     <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" class="pattern-svg">
                                         <?php if ($pattern_id === 0): // Círculos ?>
                                             <circle cx="100" cy="60" r="40" fill="rgba(255,255,255,0.1)"/>
@@ -238,31 +233,26 @@ if ($shortcode_category_id) {
                                         <?php endif; ?>
                                     </svg>
                                 </div>
-                                
-                                <?php if ($category) : ?>
-                                    <div class="course-category-badge">
-                                        <?php echo esc_html($category->name); ?>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <div class="course-header">
-                                    <h3 class="course-title">
-                                        <?php echo esc_html($course->name); ?>
-                                    </h3>
-                                </div>
-                                
-                                <div class="course-content">
-                                    <?php if ($course->moodle_id) : ?>
-                                        <p class="course-code">
-                                            <strong><?php echo esc_html(__('Código:', 'moodle-management')); ?></strong>
-                                            <code><?php echo esc_html($course->moodle_id); ?></code>
-                                        </p>
+
+                                <!-- Overlay escuro -->
+                                <div class="course-card-overlay"></div>
+
+                                <!-- Conteúdo sobre a imagem -->
+                                <div class="course-card-header">
+                                    <?php if ($category) : ?>
+                                        <span class="course-category-badge">
+                                            <?php echo esc_html($category->name); ?>
+                                        </span>
                                     <?php endif; ?>
                                 </div>
 
-                                <div class="course-footer">
+                                <div class="course-card-body">
+                                    <h3 class="course-title">
+                                        <?php echo esc_html($course->name); ?>
+                                    </h3>
+                                    
                                     <?php if ($display_price !== null && $display_price > 0) : ?>
-                                        <div class="course-price-wrapper">
+                                        <div class="course-card-price">
                                             <?php if ($is_promotional) : ?>
                                                 <span class="promotion-badge">
                                                     <i class="fas fa-tag"></i> <?php echo esc_html(__('Promoção', 'moodle-management')); ?>
@@ -516,8 +506,6 @@ if ($shortcode_category_id) {
 
             /* ====== COURSE CARD ====== */
             .course-card {
-                background: var(--neutral-surface);
-                border: 1px solid rgba(0, 0, 0, 0.06);
                 border-radius: 12px;
                 overflow: hidden;
                 display: flex;
@@ -525,68 +513,87 @@ if ($shortcode_category_id) {
                 position: relative;
                 box-shadow: var(--shadow-sm);
                 transition: var(--transition);
+                height: 100%;
+                background: var(--neutral-surface);
             }
 
             .course-card:hover {
                 box-shadow: var(--shadow-lg);
-                border-color: rgba(0, 120, 212, 0.3);
                 transform: translateY(-4px);
             }
 
-            /* ====== COURSE IMAGE ====== */
-            .course-image {
+            /* ====== COURSE CARD IMAGE (BACKGROUND) ====== */
+            .course-card-image {
                 width: 100%;
-                height: 200px;
-                overflow: hidden;
-                background: #f0f0f0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                height: 220px;
+                background: var(--course-gradient, linear-gradient(135deg, #0078d4 0%, #50e6ff 100%));
                 position: relative;
-            }
-
-            .course-image::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(135deg, rgba(0, 120, 212, 0.1) 0%, rgba(80, 230, 255, 0.1) 100%);
-                opacity: 0;
-                transition: var(--transition);
-            }
-
-            .course-card:hover .course-image::after {
-                opacity: 1;
+                overflow: hidden;
+                flex-shrink: 0;
             }
 
             .pattern-svg {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
+                display: block;
             }
 
-            .course-card:hover .course-image {
-                animation: imageZoom 0.3s ease;
+            .course-card:hover .course-card-image {
+                animation: cardImageZoom 0.4s ease;
             }
 
-            @keyframes imageZoom {
+            @keyframes cardImageZoom {
                 0% { transform: scale(1); }
                 100% { transform: scale(1.08); }
             }
 
+            /* ====== OVERLAY ESCURO ====== */
+            .course-card-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(180deg, 
+                    rgba(0, 0, 0, 0.2) 0%, 
+                    rgba(0, 0, 0, 0.4) 50%,
+                    rgba(0, 0, 0, 0.7) 100%);
+                z-index: 1;
+                transition: var(--transition);
+            }
+
+            .course-card:hover .course-card-overlay {
+                background: linear-gradient(180deg, 
+                    rgba(0, 0, 0, 0.3) 0%, 
+                    rgba(0, 0, 0, 0.5) 50%,
+                    rgba(0, 0, 0, 0.8) 100%);
+            }
+
+            /* ====== CARD HEADER (CATEGORY BADGE) ====== */
+            .course-card-header {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                padding: 16px;
+                z-index: 2;
+            }
+
             /* ====== CATEGORY BADGE ====== */
             .course-category-badge {
-                background: linear-gradient(135deg, var(--primary-color) 0%, #0063b1 100%);
+                background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
                 color: #fff;
-                padding: 8px 14px;
-                font-size: 11px;
-                font-weight: 600;
+                padding: 8px 16px;
+                font-size: 12px;
+                font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.8px;
+                letter-spacing: 1px;
+                border-radius: 20px;
+                display: inline-block;
                 position: relative;
                 overflow: hidden;
+                box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
             }
 
             .course-category-badge::before {
@@ -596,41 +603,61 @@ if ($shortcode_category_id) {
                 left: -100%;
                 width: 100%;
                 height: 100%;
-                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-                transition: left 0.5s ease;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                transition: left 0.6s ease;
             }
 
             .course-card:hover .course-category-badge::before {
                 left: 100%;
             }
 
-            /* ====== COURSE HEADER ====== */
-            .course-header {
-                padding: 16px;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            /* ====== CARD BODY (TITLE + PRICE) ====== */
+            .course-card-body {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 20px;
+                z-index: 2;
                 display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                gap: 10px;
-                flex-wrap: wrap;
+                flex-direction: column;
+                gap: 12px;
             }
 
             .course-title {
                 margin: 0;
-                font-size: 16px;
-                line-height: 1.5;
-                flex: 1;
-                min-width: 200px;
-                color: var(--neutral-dark);
-                font-weight: 600;
-                letter-spacing: 0.2px;
+                font-size: 22px;
+                line-height: 1.3;
+                color: #fff;
+                font-weight: 700;
+                letter-spacing: -0.3px;
+                text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
             }
 
-            /* ====== COURSE CONTENT ====== */
+            /* ====== COURSE PRICE (ABAIXO DO TÍTULO) ====== */
+            .course-card-price {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .course-price {
+                font-size: 16px;
+                font-weight: 700;
+                color: #fff;
+                letter-spacing: 0.3px;
+                text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+                margin: 0;
+            }
+
+            /* ====== COURSE HEADER (LEGACY - HIDDEN) ====== */
+            .course-header {
+                display: none;
+            }
+
+            /* ====== COURSE CONTENT (HIDDEN) ====== */
             .course-content {
-                padding: 16px;
-                flex: 1;
-                background: rgba(0, 0, 0, 0.02);
+                display: none;
             }
 
             .course-code {
@@ -651,12 +678,12 @@ if ($shortcode_category_id) {
 
             /* ====== COURSE FOOTER ====== */
             .course-footer {
-                padding: 16px;
-                background: rgba(0, 120, 212, 0.03);
-                border-top: 1px solid rgba(0, 0, 0, 0.06);
+                padding: 20px;
+                background: var(--neutral-surface);
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
+                border-top: 1px solid rgba(0, 0, 0, 0.06);
             }
 
             .course-price-wrapper {
@@ -664,6 +691,8 @@ if ($shortcode_category_id) {
                 flex-direction: column;
                 gap: 10px;
                 align-items: flex-start;
+                min-height: 32px;
+                justify-content: center;
             }
 
             /* ====== PROMOTION BADGE ====== */
@@ -673,13 +702,13 @@ if ($shortcode_category_id) {
                 gap: 6px;
                 background: linear-gradient(135deg, #da3b01 0%, #ea4300 100%);
                 color: #fff;
-                padding: 6px 12px;
+                padding: 8px 14px;
                 border-radius: 6px;
                 font-size: 11px;
-                font-weight: 600;
+                font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
-                box-shadow: 0 2px 8px rgba(218, 59, 1, 0.3);
+                letter-spacing: 0.8px;
+                box-shadow: 0 4px 12px rgba(218, 59, 1, 0.3);
                 animation: pulse 2s ease-in-out infinite;
             }
 
@@ -692,12 +721,12 @@ if ($shortcode_category_id) {
                 font-size: 12px;
             }
 
-            /* ====== PRICE ====== */
+            /* ====== COURSE PRICE ====== */
             .course-price {
-                font-size: 16px;
-                font-weight: 600;
-                color: var(--primary-color);
-                letter-spacing: 0.2px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #107c10;
+                letter-spacing: 0.5px;
             }
 
             /* ====== NO COURSES FOUND ====== */
