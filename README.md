@@ -49,6 +49,41 @@ moodle-managment/
 3. Vá para "Moodle Management" no menu lateral
 4. Configure as credenciais de conexão ao Moodle
 
+## Shortcodes Disponíveis
+
+### [moodle_cursos]
+
+Exibe a lista de cursos com filtros, busca e paginação.
+
+**Atributos:**
+
+- `category_id` (número) - Restringe a exibição a uma categoria específica. Padrão: `null` (todas as categorias)
+- `show_subcategories` (true/false) - Mostra subcategorias da categoria selecionada. Padrão: `true`
+- `show_title` (true/false) - Exibe um título acima dos cursos. Padrão: `false`
+- `title` (texto) - Título customizado a exibir (requer `show_title="true"`). Se não informado, usa o título da página
+
+**Exemplos:**
+
+```
+[moodle_cursos]
+<!-- Exibe todos os cursos sem título -->
+
+[moodle_cursos category_id="5"]
+<!-- Exibe cursos da categoria 5 com suas subcategorias -->
+
+[moodle_cursos category_id="5" show_subcategories="false"]
+<!-- Exibe apenas cursos da categoria 5, sem subcategorias -->
+
+[moodle_cursos show_title="true"]
+<!-- Exibe todos os cursos com título (usa título da página) -->
+
+[moodle_cursos show_title="true" title="Nossos Cursos Disponíveis"]
+<!-- Exibe todos os cursos com título customizado -->
+
+[moodle_cursos category_id="5" show_title="true" title="Cursos de Python"]
+<!-- Exibe cursos da categoria 5 com título customizado -->
+```
+
 ## Configuração
 
 Na aba "Configuração de Conexão":

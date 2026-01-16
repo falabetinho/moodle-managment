@@ -9,6 +9,7 @@ wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-aw
 
 get_header();
 require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-courses.php';
+require_once MOODLE_MANAGEMENT_PATH . 'includes/class-moodle-settings.php';
 
 global $moodle_cursos_shortcode_atts;
 
@@ -78,11 +79,18 @@ if ($shortcode_category_id) {
 <div id="primary" class="content-area">
     <main id="main" class="site-main">
 
-        <header class="page-header">
-            <h1 class="page-title">
-                <?php echo esc_html(get_the_title() ?: __('Cursos Disponíveis', 'moodle-management')); ?>
-            </h1>
-        </header>
+        <?php if (!empty($moodle_cursos_shortcode_atts['show_title'])) : ?>
+            <header class="page-header">
+                <h1 class="page-title">
+                    <?php 
+                    $title = !empty($moodle_cursos_shortcode_atts['title']) 
+                        ? $moodle_cursos_shortcode_atts['title'] 
+                        : get_the_title();
+                    echo esc_html($title ?: __('Cursos Disponíveis', 'moodle-management')); 
+                    ?>
+                </h1>
+            </header>
+        <?php endif; ?>
 
         <div class="moodle-courses-container">
             <!-- Filtros e Busca -->
@@ -183,15 +191,13 @@ if ($shortcode_category_id) {
                             <?php
                             $category = Moodle_Courses::get_category($course->category_id);
                             $price_info = Moodle_Courses::get_course_best_price($course->moodle_id);
-                            $is_promotional = $price_info && !empty($price_info->cost_promotional) && floatval($price_info->cost_promotional) > 0;
+                            $is_promotional = $price_info && !empty($price_info->default_status_id) && intval($price_info->default_status_id) === 1;
                             $display_price = null;
                             
-                            if ($price_info) {
-                                if ($is_promotional) {
-                                    $display_price = floatval($price_info->cost_promotional);
-                                } else {
-                                    $display_price = floatval($price_info->cost);
-                                }
+                            if ($price_info && !empty($price_info->cost)) {
+                                $total_cost = floatval($price_info->cost);
+                                $installments = !empty($price_info->installments) ? intval($price_info->installments) : 1;
+                                $display_price = $total_cost / $installments;
                             }
                             ?>
                             <div class="course-card">
@@ -255,7 +261,7 @@ if ($shortcode_category_id) {
                                 </div>
 
                                 <div class="course-footer">
-                                    <?php if ($display_price !== null) : ?>
+                                    <?php if ($display_price !== null && $display_price > 0) : ?>
                                         <div class="course-price-wrapper">
                                             <?php if ($is_promotional) : ?>
                                                 <span class="promotion-badge">
@@ -264,12 +270,9 @@ if ($shortcode_category_id) {
                                             <?php endif; ?>
                                             <div class="course-price">
                                                 <?php 
-                                                $currency = !empty($price_info->currency) ? $price_info->currency : 'R$';
-                                                echo sprintf(
-                                                    '<span class="price-value">%s %.2f</span>',
-                                                    esc_html($currency),
-                                                    $display_price
-                                                );
+                                                $installments = !empty($price_info->installments) ? intval($price_info->installments) : 1;
+                                                $price_message = Moodle_Settings::format_price($display_price, $installments);
+                                                echo wp_kses_post($price_message);
                                                 ?>
                                             </div>
                                         </div>
@@ -325,22 +328,55 @@ if ($shortcode_category_id) {
         </div>
 
         <style>
-            /* Mobile First - Base mobile styles */
+            /* ====== FLUENT DESIGN SYSTEM ====== */
+            /* Base & Reset */
             * {
                 box-sizing: border-box;
             }
 
+            html {
+                scroll-behavior: smooth;
+            }
+
+            body {
+                --primary-color: #0078d4;
+                --primary-light: #50e6ff;
+                --success-color: #107c10;
+                --warning-color: #ffb900;
+                --danger-color: #da3b01;
+                --neutral-dark: #242424;
+                --neutral-light: #f3f3f3;
+                --neutral-surface: #ffffff;
+                --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+                --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+                --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+                --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.16);
+                --glass-blur: blur(10px);
+                --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* ====== LAYOUT CONTAINER ====== */
             .moodle-courses-container {
                 max-width: 1200px;
-                margin: 20px auto;
+                margin: 40px auto;
                 padding: 0 15px;
             }
 
+            /* ====== FILTER SECTION ====== */
             .courses-filters {
-                background: #f5f5f5;
-                padding: 15px;
-                border-radius: 8px;
-                margin-bottom: 20px;
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: var(--glass-blur);
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                padding: 24px;
+                border-radius: 12px;
+                margin-bottom: 32px;
+                box-shadow: var(--shadow-md);
+                transition: var(--transition);
+            }
+
+            .courses-filters:hover {
+                background: rgba(255, 255, 255, 0.9);
+                box-shadow: var(--shadow-lg);
             }
 
             .filters-form {
@@ -350,18 +386,18 @@ if ($shortcode_category_id) {
             .filter-row {
                 display: flex;
                 flex-direction: column;
-                gap: 15px;
+                gap: 16px;
                 width: 100%;
             }
 
             .filter-row-category {
-                margin-bottom: 10px;
+                margin-bottom: 8px;
             }
 
             .filter-row-secondary {
-                margin-top: 10px;
-                padding-top: 15px;
-                border-top: 1px solid #e0e0e0;
+                margin-top: 8px;
+                padding-top: 16px;
+                border-top: 1px solid rgba(0, 0, 0, 0.08);
             }
 
             .filter-categories,
@@ -377,36 +413,48 @@ if ($shortcode_category_id) {
             .filter-subcategories label {
                 display: block;
                 margin-bottom: 8px;
-                font-weight: 600;
-                color: #333;
+                font-weight: 500;
+                color: var(--neutral-dark);
                 font-size: 14px;
+                letter-spacing: 0.3px;
             }
 
             .categoria-dropdown,
             .subcategoria-dropdown,
             .curso-search-input {
                 width: 100%;
-                padding: 12px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
+                padding: 12px 14px;
+                border: 1px solid rgba(0, 0, 0, 0.12);
+                border-radius: 8px;
                 font-size: 14px;
-                box-sizing: border-box;
+                background: var(--neutral-surface);
+                color: var(--neutral-dark);
+                transition: var(--transition);
+                font-family: inherit;
+            }
+
+            .categoria-dropdown:hover,
+            .subcategoria-dropdown:hover,
+            .curso-search-input:hover {
+                border-color: rgba(0, 0, 0, 0.2);
+                box-shadow: var(--shadow-sm);
             }
 
             .categoria-dropdown:focus,
             .subcategoria-dropdown:focus,
             .curso-search-input:focus {
                 outline: none;
-                border-color: #0073aa;
-                box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.1);
+                border-color: var(--primary-color);
+                box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
             }
 
             .filter-info {
-                padding: 12px;
-                background: #e8f4f8;
-                border-radius: 4px;
-                border-left: 4px solid #0073aa;
+                padding: 12px 16px;
+                background: rgba(0, 120, 212, 0.08);
+                border-radius: 8px;
+                border-left: 4px solid var(--primary-color);
                 font-size: 14px;
+                color: var(--neutral-dark);
             }
 
             .filter-submit {
@@ -417,59 +465,75 @@ if ($shortcode_category_id) {
 
             .filter-submit .button {
                 width: 100%;
-                padding: 12px;
+                padding: 12px 16px;
                 font-size: 14px;
                 border: none;
-                border-radius: 4px;
+                border-radius: 8px;
                 cursor: pointer;
-                font-weight: 600;
+                font-weight: 500;
+                transition: var(--transition);
+                letter-spacing: 0.3px;
             }
 
             .button.button-primary {
-                background: #0073aa;
+                background: var(--primary-color);
                 color: #fff;
+                box-shadow: var(--shadow-sm);
             }
 
             .button.button-primary:hover {
-                background: #005a87;
+                background: #106ebe;
+                box-shadow: var(--shadow-md);
+                transform: translateY(-2px);
+            }
+
+            .button.button-primary:active {
+                transform: translateY(0);
             }
 
             .button {
-                background: #f0f0f0;
-                color: #333;
+                background: var(--neutral-light);
+                color: var(--neutral-dark);
                 text-decoration: none;
                 display: inline-block;
                 text-align: center;
+                box-shadow: var(--shadow-sm);
             }
 
             .button:hover {
-                background: #e0e0e0;
+                background: #e8e8e8;
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-md);
             }
 
+            /* ====== COURSES GRID ====== */
             .courses-grid {
                 display: grid;
                 grid-template-columns: 1fr;
-                gap: 15px;
-                margin-bottom: 20px;
+                gap: 20px;
+                margin-bottom: 32px;
             }
 
+            /* ====== COURSE CARD ====== */
             .course-card {
-                background: #fff;
-                border: 1px solid #ddd;
-                border-radius: 8px;
+                background: var(--neutral-surface);
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                border-radius: 12px;
                 overflow: hidden;
-                transition: all 0.3s ease;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
                 display: flex;
                 flex-direction: column;
                 position: relative;
+                box-shadow: var(--shadow-sm);
+                transition: var(--transition);
             }
 
             .course-card:hover {
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                border-color: #0073aa;
+                box-shadow: var(--shadow-lg);
+                border-color: rgba(0, 120, 212, 0.3);
+                transform: translateY(-4px);
             }
 
+            /* ====== COURSE IMAGE ====== */
             .course-image {
                 width: 100%;
                 height: 200px;
@@ -478,6 +542,23 @@ if ($shortcode_category_id) {
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                position: relative;
+            }
+
+            .course-image::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, rgba(0, 120, 212, 0.1) 0%, rgba(80, 230, 255, 0.1) 100%);
+                opacity: 0;
+                transition: var(--transition);
+            }
+
+            .course-card:hover .course-image::after {
+                opacity: 1;
             }
 
             .pattern-svg {
@@ -487,27 +568,46 @@ if ($shortcode_category_id) {
             }
 
             .course-card:hover .course-image {
-                animation: patternShift 0.3s ease;
+                animation: imageZoom 0.3s ease;
             }
 
-            @keyframes patternShift {
+            @keyframes imageZoom {
                 0% { transform: scale(1); }
-                100% { transform: scale(1.05); }
+                100% { transform: scale(1.08); }
             }
 
+            /* ====== CATEGORY BADGE ====== */
             .course-category-badge {
-                background: linear-gradient(135deg, #0073aa 0%, #005a87 100%);
+                background: linear-gradient(135deg, var(--primary-color) 0%, #0063b1 100%);
                 color: #fff;
-                padding: 8px 12px;
-                font-size: 12px;
+                padding: 8px 14px;
+                font-size: 11px;
                 font-weight: 600;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.8px;
+                position: relative;
+                overflow: hidden;
             }
 
+            .course-category-badge::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+                transition: left 0.5s ease;
+            }
+
+            .course-card:hover .course-category-badge::before {
+                left: 100%;
+            }
+
+            /* ====== COURSE HEADER ====== */
             .course-header {
-                padding: 15px;
-                border-bottom: 1px solid #eee;
+                padding: 16px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.06);
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
@@ -518,124 +618,162 @@ if ($shortcode_category_id) {
             .course-title {
                 margin: 0;
                 font-size: 16px;
-                line-height: 1.4;
+                line-height: 1.5;
                 flex: 1;
                 min-width: 200px;
-                color: #333;
+                color: var(--neutral-dark);
+                font-weight: 600;
+                letter-spacing: 0.2px;
             }
 
+            /* ====== COURSE CONTENT ====== */
             .course-content {
-                padding: 15px;
+                padding: 16px;
                 flex: 1;
+                background: rgba(0, 0, 0, 0.02);
             }
 
             .course-code {
                 margin: 0;
                 color: #666;
                 font-size: 13px;
+                font-weight: 500;
             }
 
             .course-code code {
-                background: #f0f0f0;
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-family: monospace;
-                color: #333;
+                background: rgba(0, 120, 212, 0.1);
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-family: 'Segoe UI', monospace;
+                color: var(--primary-color);
+                font-weight: 600;
             }
 
+            /* ====== COURSE FOOTER ====== */
             .course-footer {
-                padding: 15px;
-                background: #fafafa;
-                border-top: 1px solid #eee;
+                padding: 16px;
+                background: rgba(0, 120, 212, 0.03);
+                border-top: 1px solid rgba(0, 0, 0, 0.06);
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 12px;
             }
 
             .course-price-wrapper {
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
+                gap: 10px;
                 align-items: flex-start;
             }
 
+            /* ====== PROMOTION BADGE ====== */
             .promotion-badge {
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                background: #ff6b6b;
+                background: linear-gradient(135deg, #da3b01 0%, #ea4300 100%);
                 color: #fff;
-                padding: 4px 10px;
-                border-radius: 4px;
+                padding: 6px 12px;
+                border-radius: 6px;
                 font-size: 11px;
                 font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
+                box-shadow: 0 2px 8px rgba(218, 59, 1, 0.3);
+                animation: pulse 2s ease-in-out infinite;
+            }
+
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.8; }
             }
 
             .promotion-badge i {
                 font-size: 12px;
             }
 
+            /* ====== PRICE ====== */
             .course-price {
-                display: flex;
-                align-items: baseline;
-                gap: 5px;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--primary-color);
+                letter-spacing: 0.2px;
             }
 
-            .price-value {
-                font-size: 18px;
-                font-weight: 700;
-                color: #0073aa;
-            }
-
+            /* ====== NO COURSES FOUND ====== */
             .no-courses-found {
                 text-align: center;
-                padding: 40px 15px;
+                padding: 60px 20px;
                 color: #666;
-                background: #f5f5f5;
-                border-radius: 8px;
+                background: rgba(0, 0, 0, 0.02);
+                border-radius: 12px;
+                border: 1px dashed rgba(0, 0, 0, 0.1);
             }
 
+            .no-courses-found p {
+                font-size: 16px;
+                margin: 0;
+            }
+
+            /* ====== PAGINATION ====== */
             .courses-pagination {
                 text-align: center;
-                margin-top: 20px;
-                padding: 15px;
+                margin-top: 32px;
+                padding: 20px;
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 8px;
             }
 
             .courses-pagination a,
             .courses-pagination span {
-                display: inline-block;
-                padding: 8px 12px;
-                margin: 0 4px 4px 0;
-                border: 1px solid #ddd;
-                border-radius: 4px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px 12px;
+                min-width: 40px;
+                border: 1px solid rgba(0, 0, 0, 0.12);
+                border-radius: 8px;
                 text-decoration: none;
-                color: #0073aa;
+                color: var(--primary-color);
                 font-size: 13px;
+                font-weight: 500;
+                transition: var(--transition);
+                background: var(--neutral-surface);
+            }
+
+            .courses-pagination a:hover {
+                background: var(--neutral-light);
+                border-color: var(--primary-color);
+                box-shadow: var(--shadow-sm);
+                transform: translateY(-2px);
             }
 
             .courses-pagination span.page-numbers.current {
-                background: #0073aa;
+                background: var(--primary-color);
                 color: #fff;
-                border-color: #0073aa;
+                border-color: var(--primary-color);
+                font-weight: 600;
+                box-shadow: var(--shadow-md);
             }
 
-            /* Tablet - 600px and up */
+            /* ====== MOBILE STYLES ====== */
             @media (min-width: 600px) {
                 .moodle-courses-container {
-                    margin: 25px auto;
+                    margin: 40px auto;
                     padding: 0 20px;
                 }
 
                 .courses-filters {
-                    padding: 20px;
-                    margin-bottom: 25px;
+                    padding: 28px;
+                    margin-bottom: 36px;
                 }
 
                 .filter-row {
                     flex-direction: row;
                     align-items: flex-end;
+                    gap: 20px;
                 }
 
                 .filter-categories,
@@ -656,7 +794,7 @@ if ($shortcode_category_id) {
 
                 .courses-grid {
                     grid-template-columns: repeat(2, 1fr);
-                    gap: 20px;
+                    gap: 24px;
                 }
 
                 .course-card {
@@ -664,29 +802,29 @@ if ($shortcode_category_id) {
                 }
             }
 
-            /* Desktop - 768px and up */
+            /* ====== TABLET STYLES ====== */
             @media (min-width: 768px) {
                 .moodle-courses-container {
-                    margin: 30px auto;
-                    padding: 0 20px;
+                    margin: 50px auto;
+                    padding: 0 24px;
                 }
 
                 .courses-filters {
-                    padding: 20px;
-                    margin-bottom: 30px;
+                    padding: 32px;
+                    margin-bottom: 40px;
                 }
 
                 .filter-row {
-                    gap: 20px;
+                    gap: 24px;
                 }
 
                 .filter-row-category {
-                    margin-bottom: 15px;
+                    margin-bottom: 16px;
                 }
 
                 .filter-row-secondary {
-                    margin-top: 15px;
-                    padding-top: 15px;
+                    margin-top: 16px;
+                    padding-top: 20px;
                 }
 
                 .filter-categories,
@@ -704,12 +842,12 @@ if ($shortcode_category_id) {
 
                 .filter-submit .button {
                     flex: 1;
-                    padding: 10px 20px;
+                    padding: 12px 20px;
                 }
 
                 .courses-grid {
                     grid-template-columns: repeat(3, 1fr);
-                    gap: 20px;
+                    gap: 28px;
                 }
 
                 .course-card {
@@ -727,12 +865,64 @@ if ($shortcode_category_id) {
                 .course-footer {
                     padding: 20px;
                 }
+
+                .course-title {
+                    font-size: 17px;
+                }
             }
 
-            /* Large Desktop - 1024px and up */
+            /* ====== DESKTOP STYLES ====== */
             @media (min-width: 1024px) {
                 .courses-grid {
                     grid-template-columns: repeat(3, 1fr);
+                    gap: 32px;
+                }
+
+                .moodle-courses-container {
+                    padding: 0 32px;
+                }
+            }
+
+            /* ====== ACCESSIBILITY ====== */
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                }
+            }
+
+            @media (prefers-color-scheme: dark) {
+                body {
+                    --neutral-dark: #ffffff;
+                    --neutral-light: #2d2d2d;
+                    --neutral-surface: #1e1e1e;
+                }
+
+                .courses-filters {
+                    background: rgba(30, 30, 30, 0.7);
+                    border-color: rgba(255, 255, 255, 0.1);
+                }
+
+                .course-card {
+                    background: #2d2d2d;
+                    border-color: rgba(255, 255, 255, 0.1);
+                }
+
+                .course-content {
+                    background: rgba(255, 255, 255, 0.05);
+                }
+
+                .course-footer {
+                    background: rgba(0, 120, 212, 0.08);
+                }
+
+                .course-title {
+                    color: #ffffff;
+                }
+
+                .filter-info {
+                    background: rgba(0, 120, 212, 0.15);
                 }
             }
         </style>

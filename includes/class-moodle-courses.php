@@ -318,7 +318,7 @@ class Moodle_Courses {
         $table = $wpdb->prefix . 'moodle_enrol_methods';
         
         return $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $table WHERE course_id = %d ORDER BY cost DESC",
+            "SELECT * FROM $table WHERE moodle_course_id = %d ORDER BY cost DESC",
             $course_id
         ));
     }
@@ -326,6 +326,7 @@ class Moodle_Courses {
     /**
      * Get best price for a course (default price or promotional price)
      * Returns the promotional price if available, otherwise the default price
+     * Promotional status: default_status_id = 1
      */
     public static function get_course_best_price($course_id) {
         $enrol_methods = self::get_course_enrol_methods($course_id);
@@ -334,22 +335,29 @@ class Moodle_Courses {
             return null;
         }
 
-        // Procurar por preço válido (qualquer um com custo)
+        $promotional = null;
+        $default = null;
+
         foreach ($enrol_methods as $method) {
-            // Se tem preço promocional, usar ele
-            if (!empty($method->cost_promotional) && floatval($method->cost_promotional) > 0) {
-                return $method;
+            // Buscar por preço válido (cost não vazio)
+            if (empty($method->cost)) {
+                continue;
+            }
+
+            // Se é promocional (default_status_id = 1) e tem preço
+            if (!empty($method->default_status_id) && intval($method->default_status_id) === 1) {
+                $promotional = $method;
+                break;
+            }
+
+            // Se é padrão (default_status_id = 0) e tem preço
+            if (empty($default) && (empty($method->default_status_id) || intval($method->default_status_id) === 0)) {
+                $default = $method;
             }
         }
 
-        // Se não tem promocional, buscar preço padrão
-        foreach ($enrol_methods as $method) {
-            if (!empty($method->cost) && floatval($method->cost) > 0) {
-                return $method;
-            }
-        }
-
-        return null;
+        // Retornar promocional se existir, senão padrão
+        return $promotional ?? $default;
     }
 
     /**
@@ -364,6 +372,8 @@ class Moodle_Courses {
         $atts = shortcode_atts(array(
             'category_id' => null,
             'show_subcategories' => true,
+            'show_title' => false,
+            'title' => '',
         ), $atts, 'moodle_cursos');
 
         // Armazenar parâmetros para usar no template
