@@ -18,11 +18,20 @@ $shortcode_category_id = null;
 $show_subcategories = true;
 $page_url = null;
 
+// Configurações do botão de inscrição do painel
+$enroll_button_title = Moodle_Settings::get_enroll_button_title();
+$enroll_button_url_template = Moodle_Settings::get_enroll_button_url();
+$enroll_button_color = Moodle_Settings::get_enroll_button_color();
+
 if (!empty($moodle_cursos_shortcode_atts)) {
     $shortcode_category_id = !empty($moodle_cursos_shortcode_atts['category_id']) ? intval($moodle_cursos_shortcode_atts['category_id']) : null;
     $show_subcategories = !empty($moodle_cursos_shortcode_atts['show_subcategories']) ? $moodle_cursos_shortcode_atts['show_subcategories'] : true;
     $page_url = !empty($moodle_cursos_shortcode_atts['page_url']) ? $moodle_cursos_shortcode_atts['page_url'] : null;
 }
+
+global $wpdb;
+$settings_table = $wpdb->prefix . 'moodle_settings';
+$moodle_base_url = rtrim((string) $wpdb->get_var("SELECT setting_value FROM $settings_table WHERE setting_key = 'base_url'"), '/');
 
 $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
 if (isset($_GET['paged'])) {
@@ -193,11 +202,15 @@ if ($shortcode_category_id) {
                             $price_info = Moodle_Courses::get_course_best_price($course->moodle_id);
                             $is_promotional = $price_info && !empty($price_info->default_status_id) && intval($price_info->default_status_id) === 1;
                             $display_price = null;
+                            $installments = 1;
+                            $price_message = '';
                             
                             if ($price_info && !empty($price_info->cost)) {
                                 $total_cost = floatval($price_info->cost);
                                 $installments = !empty($price_info->installments) ? intval($price_info->installments) : 1;
                                 $display_price = $total_cost / $installments;
+
+                                $price_message = Moodle_Settings::format_price($display_price, $installments);
                             }
                             ?>
                             <?php
@@ -264,15 +277,21 @@ if ($shortcode_category_id) {
                                     <?php if ($display_price !== null && $display_price > 0) : ?>
                                         <div class="course-card-price">
                                             <div class="course-price-badge">
-                                                <?php 
-                                                $installments = !empty($price_info->installments) ? intval($price_info->installments) : 1;
-                                                $price_message = Moodle_Settings::format_price($display_price, $installments);
-                                                echo wp_kses_post($price_message);
-                                                ?>
+                                                <?php echo wp_kses_post($price_message); ?>
                                             </div>
                                         </div>
                                     <?php endif; ?>
                                 </div>
+
+                                <!-- Botão Ver Detalhes -->
+                                <button class="course-details-btn" 
+                                        data-course-id="<?php echo esc_attr($course->moodle_id); ?>"
+                                        data-course-name="<?php echo esc_attr($course->name); ?>"
+                                        data-course-description="<?php echo esc_attr(wp_strip_all_tags($course->description)); ?>"
+                                        data-course-category="<?php echo $category ? esc_attr($category->name) : ''; ?>"
+                                        data-course-price="<?php echo $display_price > 0 ? esc_attr(wp_strip_all_tags($price_message)) : ''; ?>">
+                                    <i class="fas fa-info-circle"></i> Ver detalhes
+                                </button>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -389,6 +408,29 @@ if ($shortcode_category_id) {
                         <p><?php echo esc_html(__('Nenhum curso encontrado.', 'moodle-management')); ?></p>
                     </div>
                 <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Drawer de Detalhes do Curso -->
+        <div id="course-drawer" class="course-drawer">
+            <div class="course-drawer-overlay"></div>
+            <div class="course-drawer-content">
+                <div class="course-drawer-header">
+                    <h2 id="drawer-course-name"></h2>
+                    <button class="course-drawer-close" aria-label="Fechar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="course-drawer-body">
+                    <div class="drawer-category-badge" id="drawer-course-category"></div>
+                    <div class="drawer-course-description" id="drawer-course-description"></div>
+                    <div class="drawer-course-price" id="drawer-course-price"></div>
+                </div>
+                <div class="course-drawer-footer">
+                    <a href="#" id="drawer-enroll-btn" class="drawer-enroll-button" target="_blank" style="--drawer-button-bg: <?php echo esc_attr($enroll_button_color); ?>;">
+                        <i class="fas fa-graduation-cap"></i> <?php echo esc_html($enroll_button_title); ?>
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -828,6 +870,220 @@ if ($shortcode_category_id) {
                 margin: 0;
             }
 
+            /* ====== BOTÃO VER DETALHES ====== */
+            .course-details-btn {
+                position: absolute;
+                bottom: 16px;
+                right: 16px;
+                background: rgba(255, 255, 255, 0.95);
+                color: var(--primary-color);
+                border: 1px solid rgba(0, 120, 212, 0.3);
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                z-index: 3;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                transition: var(--transition);
+                backdrop-filter: blur(10px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            .course-details-btn:hover {
+                background: var(--primary-color);
+                color: #fff;
+                border-color: var(--primary-color);
+                box-shadow: 0 4px 16px rgba(0, 120, 212, 0.4);
+                transform: translateY(-2px);
+            }
+
+            .course-details-btn i {
+                font-size: 14px;
+            }
+
+            /* ====== DRAWER DE DETALHES ====== */
+            .course-drawer {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                left: 0;
+                z-index: 9999;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+
+            .course-drawer.active {
+                pointer-events: all;
+                opacity: 1;
+            }
+
+            .course-drawer-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(3px);
+                cursor: pointer;
+            }
+
+            .course-drawer-content {
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 90%;
+                max-width: 500px;
+                background: var(--neutral-surface);
+                box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+                display: flex;
+                flex-direction: column;
+                transform: translateX(100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .course-drawer.active .course-drawer-content {
+                transform: translateX(0);
+            }
+
+            .course-drawer-header {
+                padding: 24px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                background: linear-gradient(135deg, var(--primary-color) 0%, #106ebe 100%);
+                color: #fff;
+            }
+
+            .course-drawer-header h2 {
+                margin: 0;
+                font-size: 1.4rem;
+                font-weight: 700;
+                line-height: 1.3;
+            }
+
+            .course-drawer-close {
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: #fff;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: var(--transition);
+                flex-shrink: 0;
+            }
+
+            .course-drawer-close:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: rotate(90deg);
+            }
+
+            .course-drawer-close i {
+                font-size: 18px;
+            }
+
+            .course-drawer-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 24px;
+            }
+
+            .drawer-category-badge {
+                display: inline-block;
+                background: linear-gradient(135deg, var(--primary-color) 0%, #106ebe 100%);
+                color: #fff;
+                padding: 6px 14px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+                border-radius: 16px;
+                margin-bottom: 16px;
+            }
+
+            .drawer-course-description {
+                color: var(--neutral-dark);
+                line-height: 1.7;
+                font-size: 15px;
+                margin-bottom: 20px;
+                white-space: pre-wrap;
+            }
+
+            .drawer-course-description:empty::before {
+                content: 'Nenhuma descrição disponível para este curso.';
+                color: #999;
+                font-style: italic;
+            }
+
+            .drawer-course-price {
+                display: inline-block;
+                background: rgba(0, 120, 212, 0.1);
+                color: var(--primary-color);
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 700;
+                border: 1px solid rgba(0, 120, 212, 0.2);
+            }
+
+            .drawer-course-price:empty {
+                display: none;
+            }
+
+            .course-drawer-footer {
+                padding: 0;
+                border-top: 1px solid rgba(0, 0, 0, 0.1);
+                background: var(--neutral-light);
+            }
+
+            .drawer-enroll-button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                width: 100%;
+                padding: 18px 24px;
+                background: var(--drawer-button-bg, #107c10);
+                color: #fff;
+                font-size: 16px;
+                font-weight: 700;
+                text-decoration: none;
+                transition: var(--transition);
+                border: none;
+                cursor: pointer;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .drawer-enroll-button:hover {
+                filter: brightness(1.1);
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            }
+
+            .drawer-enroll-button i {
+                font-size: 18px;
+            }
+
+            /* ====== DRAWER RESPONSIVE ====== */
+            @media (min-width: 768px) {
+                .course-drawer-content {
+                    width: 500px;
+                }
+            }
+
+
             /* ====== PAGINATION ====== */
             .courses-pagination {
                 text-align: center;
@@ -1056,6 +1312,112 @@ if ($shortcode_category_id) {
                 }
             }
         </style>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const drawer = document.getElementById('course-drawer');
+            const drawerOverlay = drawer.querySelector('.course-drawer-overlay');
+            const drawerClose = drawer.querySelector('.course-drawer-close');
+            const detailButtons = document.querySelectorAll('.course-details-btn');
+            
+            // Elementos do drawer
+            const drawerCourseName = document.getElementById('drawer-course-name');
+            const drawerCourseCategory = document.getElementById('drawer-course-category');
+            const drawerCourseDescription = document.getElementById('drawer-course-description');
+            const drawerCoursePrice = document.getElementById('drawer-course-price');
+            const drawerEnrollBtn = document.getElementById('drawer-enroll-btn');
+
+            const enrollConfig = <?php echo wp_json_encode(array(
+                'title' => $enroll_button_title,
+                'color' => $enroll_button_color,
+                'urlTemplate' => $enroll_button_url_template,
+                'baseUrl' => $moodle_base_url,
+            ), JSON_UNESCAPED_SLASHES); ?>;
+
+            // Função para abrir o drawer
+            function openDrawer(courseData) {
+                // Preencher informações do curso
+                drawerCourseName.textContent = courseData.name;
+                
+                if (courseData.category) {
+                    drawerCourseCategory.textContent = courseData.category;
+                    drawerCourseCategory.style.display = 'inline-block';
+                } else {
+                    drawerCourseCategory.style.display = 'none';
+                }
+                
+                if (courseData.description && courseData.description.trim() !== '') {
+                    drawerCourseDescription.textContent = courseData.description;
+                } else {
+                    drawerCourseDescription.textContent = '';
+                }
+                
+                if (courseData.price && courseData.price.trim() !== '') {
+                    drawerCoursePrice.innerHTML = courseData.price;
+                    drawerCoursePrice.style.display = 'inline-block';
+                } else {
+                    drawerCoursePrice.style.display = 'none';
+                }
+
+                const buttonTitle = enrollConfig.title || '<?php echo esc_js(__('Inscrever-se no Curso', 'moodle-management')); ?>';
+                drawerEnrollBtn.innerHTML = '<i class="fas fa-graduation-cap"></i> ' + buttonTitle;
+
+                if (enrollConfig.color) {
+                    drawerEnrollBtn.style.background = enrollConfig.color;
+                }
+
+                let enrollUrl = '#';
+                if (enrollConfig.urlTemplate) {
+                    enrollUrl = enrollConfig.urlTemplate.replace('{course_id}', courseData.id);
+                } else if (enrollConfig.baseUrl) {
+                    enrollUrl = enrollConfig.baseUrl + '/course/view.php?id=' + courseData.id;
+                }
+
+                drawerEnrollBtn.href = enrollUrl;
+
+                // Abrir o drawer
+                drawer.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            // Função para fechar o drawer
+            function closeDrawer() {
+                drawer.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            // Event listeners para botões "Ver detalhes"
+            detailButtons.forEach(function(button) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const courseData = {
+                        id: this.dataset.courseId,
+                        name: this.dataset.courseName,
+                        description: this.dataset.courseDescription,
+                        category: this.dataset.courseCategory,
+                        price: this.dataset.coursePrice
+                    };
+                    
+                    openDrawer(courseData);
+                });
+            });
+
+            // Event listener para fechar com overlay
+            drawerOverlay.addEventListener('click', closeDrawer);
+
+            // Event listener para botão de fechar
+            drawerClose.addEventListener('click', closeDrawer);
+
+            // Event listener para ESC key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && drawer.classList.contains('active')) {
+                    closeDrawer();
+                }
+            });
+        });
+        </script>
 
     </main>
 </div>
