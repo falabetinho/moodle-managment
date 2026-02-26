@@ -25,6 +25,7 @@ class Moodle_Admin_Tabs {
             'categories' => __('Gerenciar Categorias', 'moodle-management'),
             'courses' => __('Importar Cursos', 'moodle-management'),
             'enrol' => __('Importar Métodos de Enrol', 'moodle-management'),
+            'webhooks' => __('Webhooks', 'moodle-management'),
         );
         
         $this->init_hooks();
@@ -100,6 +101,9 @@ class Moodle_Admin_Tabs {
                         break;
                     case 'enrol':
                         $this->render_enrol_tab();
+                        break;
+                    case 'webhooks':
+                        $this->render_webhooks_tab();
                         break;
                 }
                 ?>
@@ -388,6 +392,52 @@ class Moodle_Admin_Tabs {
                     </tbody>
                 </table>
             <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render webhooks info tab
+     */
+    private function render_webhooks_tab() {
+        $secret = Moodle_Webhooks::get_secret();
+        $base = rest_url('moodle-management/v1/webhooks');
+
+        $categories_url = add_query_arg('token', $secret, $base . '/categories');
+        $courses_url = add_query_arg('token', $secret, $base . '/courses');
+        $prices_url = add_query_arg('token', $secret, $base . '/prices');
+        ?>
+        <div class="moodle-tab-content">
+            <h2><?php echo esc_html(__('Webhooks', 'moodle-management')); ?></h2>
+
+            <p><?php echo esc_html(__('Use os webhooks abaixo para disparar atualizações internas de categorias, cursos e preços.', 'moodle-management')); ?></p>
+
+            <table class="wp-list-table widefat striped">
+                <thead>
+                    <tr>
+                        <th><?php echo esc_html(__('Ação', 'moodle-management')); ?></th>
+                        <th><?php echo esc_html(__('Endpoint (POST)', 'moodle-management')); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><?php echo esc_html(__('Atualizar Categorias', 'moodle-management')); ?></td>
+                        <td><code><?php echo esc_html($categories_url); ?></code></td>
+                    </tr>
+                    <tr>
+                        <td><?php echo esc_html(__('Atualizar Cursos', 'moodle-management')); ?></td>
+                        <td><code><?php echo esc_html($courses_url); ?></code></td>
+                    </tr>
+                    <tr>
+                        <td><?php echo esc_html(__('Atualizar Preços', 'moodle-management')); ?></td>
+                        <td><code><?php echo esc_html($prices_url); ?></code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p class="description" style="margin-top: 12px;">
+                <?php echo esc_html(__('Envie o token no header X-Moodle-Webhook-Token ou como parâmetro token na URL.', 'moodle-management')); ?>
+            </p>
         </div>
         <?php
     }

@@ -13,6 +13,11 @@ Thumbs.db
 /node_modules/
 /vendor/
 composer.lock
+package-lock.json
+
+# Build/Distribution
+/dist/
+*.zip
 
 # Logs
 *.log

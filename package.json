@@ -1,0 +1,22 @@
+{
+  "name": "moodle-management",
+  "version": "1.0.0",
+  "description": "Plugin WordPress para gerenciar a integração com Moodle",
+  "main": "moodle-management.php",
+  "scripts": {
+    "build": "grunt compress",
+    "zip": "grunt compress"
+  },
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "moodle",
+    "integration"
+  ],
+  "author": "Falabetinho",
+  "license": "GPL-2.0+",
+  "devDependencies": {
+    "grunt": "^1.6.1",
+    "grunt-contrib-compress": "^2.0.0"
+  }
+}
