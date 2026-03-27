@@ -26,6 +26,7 @@ class Moodle_Admin_Tabs {
             'courses' => __('Importar Cursos', 'moodle-management'),
             'enrol' => __('Importar Métodos de Enrol', 'moodle-management'),
             'webhooks' => __('Webhooks', 'moodle-management'),
+            'shortcodes_help' => __('Ajuda de Shortcodes', 'moodle-management'),
         );
         
         $this->init_hooks();
@@ -104,6 +105,9 @@ class Moodle_Admin_Tabs {
                         break;
                     case 'webhooks':
                         $this->render_webhooks_tab();
+                        break;
+                    case 'shortcodes_help':
+                        $this->render_shortcodes_help_tab();
                         break;
                 }
                 ?>
@@ -437,6 +441,73 @@ class Moodle_Admin_Tabs {
 
             <p class="description" style="margin-top: 12px;">
                 <?php echo esc_html(__('Envie o token no header X-Moodle-Webhook-Token ou como parâmetro token na URL.', 'moodle-management')); ?>
+            </p>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render shortcode help tab
+     */
+    private function render_shortcodes_help_tab() {
+        ?>
+        <div class="moodle-tab-content">
+            <h2><?php echo esc_html(__('Ajuda de Shortcodes', 'moodle-management')); ?></h2>
+
+            <p>
+                <?php echo esc_html(__('Use o shortcode abaixo em qualquer página ou post para exibir os cursos sincronizados do Moodle.', 'moodle-management')); ?>
+            </p>
+
+            <p>
+                <code>[moodle_cursos]</code>
+            </p>
+
+            <h3><?php echo esc_html(__('Atributos Disponíveis', 'moodle-management')); ?></h3>
+            <table class="wp-list-table widefat striped">
+                <thead>
+                    <tr>
+                        <th><?php echo esc_html(__('Atributo', 'moodle-management')); ?></th>
+                        <th><?php echo esc_html(__('Padrão', 'moodle-management')); ?></th>
+                        <th><?php echo esc_html(__('Descrição', 'moodle-management')); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>category_id</code></td>
+                        <td><code>null</code></td>
+                        <td><?php echo esc_html(__('Filtra cursos por categoria do Moodle (ID numérico).', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>show_subcategories</code></td>
+                        <td><code>true</code></td>
+                        <td><?php echo esc_html(__('Quando true, inclui cursos das subcategorias da categoria selecionada.', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>show_title</code></td>
+                        <td><code>false</code></td>
+                        <td><?php echo esc_html(__('Exibe ou oculta o título acima da grade de cursos.', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>title</code></td>
+                        <td><code>''</code></td>
+                        <td><?php echo esc_html(__('Define um título personalizado para a listagem de cursos.', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>color_scheme</code></td>
+                        <td><code>auto</code></td>
+                        <td><?php echo esc_html(__('Esquema de cores dos cards. Atualmente: auto.', 'moodle-management')); ?></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3><?php echo esc_html(__('Exemplos Prontos', 'moodle-management')); ?></h3>
+            <p><code>[moodle_cursos]</code></p>
+            <p><code>[moodle_cursos show_title="true" title="Cursos em Destaque"]</code></p>
+            <p><code>[moodle_cursos category_id="123"]</code></p>
+            <p><code>[moodle_cursos category_id="123" show_subcategories="false"]</code></p>
+
+            <p class="description" style="margin-top: 14px;">
+                <?php echo esc_html(__('Dica: use true/false para atributos booleanos. Os filtros da página funcionam normalmente quando o shortcode está inserido em uma página.', 'moodle-management')); ?>
             </p>
         </div>
         <?php

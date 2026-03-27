@@ -203,7 +203,8 @@ get_header();
             }
 
             .courses-filters {
-                background: #f5f5f5;
+                background: #fafbfd;
+                border: 1px solid rgba(0, 0, 0, 0.06);
                 padding: 20px;
                 border-radius: 8px;
                 margin-bottom: 30px;

@@ -220,7 +220,16 @@ if ($shortcode_category_id) {
                             $gradient = Moodle_Courses::get_course_gradient($course->moodle_id, $color_scheme);
                             $cardStyle = "--course-gradient: {$gradient};";
                             ?>
-                            <div class="course-card" style="<?php echo esc_attr($cardStyle); ?>">
+                                   <div class="course-card"
+                                       style="<?php echo esc_attr($cardStyle); ?>"
+                                       tabindex="0"
+                                       role="button"
+                                       aria-label="<?php echo esc_attr(sprintf(__('Ver detalhes do curso %s', 'moodle-management'), $course->name)); ?>"
+                                       data-course-id="<?php echo esc_attr($course->moodle_id); ?>"
+                                       data-course-name="<?php echo esc_attr($course->name); ?>"
+                                       data-course-description="<?php echo esc_attr(wp_strip_all_tags($course->description)); ?>"
+                                       data-course-category="<?php echo $category ? esc_attr($category->name) : ''; ?>"
+                                       data-course-price="<?php echo $display_price > 0 ? esc_attr(wp_strip_all_tags($price_message)) : ''; ?>">
                                 <!-- Background com padrão -->
                                 <div class="course-card-image">
                                     <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" class="pattern-svg">
@@ -284,13 +293,11 @@ if ($shortcode_category_id) {
                                 </div>
 
                                 <!-- Botão Ver Detalhes -->
-                                <button class="course-details-btn" 
-                                        data-course-id="<?php echo esc_attr($course->moodle_id); ?>"
-                                        data-course-name="<?php echo esc_attr($course->name); ?>"
-                                        data-course-description="<?php echo esc_attr(wp_strip_all_tags($course->description)); ?>"
-                                        data-course-category="<?php echo $category ? esc_attr($category->name) : ''; ?>"
-                                        data-course-price="<?php echo $display_price > 0 ? esc_attr(wp_strip_all_tags($price_message)) : ''; ?>">
-                                    <i class="fas fa-info-circle"></i> Ver detalhes
+                                <button class="course-details-btn"
+                                        type="button"
+                                        aria-label="<?php echo esc_attr(__('Ver detalhes do curso', 'moodle-management')); ?>"
+                                        title="<?php echo esc_attr(__('Ver detalhes do curso', 'moodle-management')); ?>">
+                                    <i class="fas fa-info-circle" aria-hidden="true"></i>
                                 </button>
                             </div>
                         <?php endforeach; ?>
@@ -471,9 +478,9 @@ if ($shortcode_category_id) {
 
             /* ====== FILTER SECTION ====== */
             .courses-filters {
-                background: rgba(255, 255, 255, 0.7);
+                background: rgba(255, 255, 255, 0.92);
                 backdrop-filter: var(--glass-blur);
-                border: 1px solid rgba(0, 0, 0, 0.06);
+                border: 1px solid rgba(0, 0, 0, 0.08);
                 padding: 24px;
                 border-radius: 12px;
                 margin-bottom: 32px;
@@ -482,7 +489,7 @@ if ($shortcode_category_id) {
             }
 
             .courses-filters:hover {
-                background: rgba(255, 255, 255, 0.9);
+                background: rgba(255, 255, 255, 0.98);
                 box-shadow: var(--shadow-lg);
             }
 
@@ -632,6 +639,12 @@ if ($shortcode_category_id) {
                 transition: var(--transition);
                 height: 100%;
                 background: var(--neutral-surface);
+                cursor: pointer;
+            }
+
+            .course-card:focus-visible {
+                outline: 3px solid rgba(0, 120, 212, 0.45);
+                outline-offset: 3px;
             }
 
             .course-card:hover {
@@ -878,15 +891,14 @@ if ($shortcode_category_id) {
                 background: rgba(255, 255, 255, 0.95);
                 color: var(--primary-color);
                 border: 1px solid rgba(0, 120, 212, 0.3);
-                padding: 8px 16px;
-                border-radius: 20px;
-                font-size: 13px;
-                font-weight: 600;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
                 cursor: pointer;
                 z-index: 3;
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                justify-content: center;
                 transition: var(--transition);
                 backdrop-filter: blur(10px);
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -901,7 +913,7 @@ if ($shortcode_category_id) {
             }
 
             .course-details-btn i {
-                font-size: 14px;
+                font-size: 16px;
             }
 
             /* ====== DRAWER DE DETALHES ====== */
@@ -1318,6 +1330,7 @@ if ($shortcode_category_id) {
             const drawer = document.getElementById('course-drawer');
             const drawerOverlay = drawer.querySelector('.course-drawer-overlay');
             const drawerClose = drawer.querySelector('.course-drawer-close');
+            const courseCards = document.querySelectorAll('.course-card');
             const detailButtons = document.querySelectorAll('.course-details-btn');
             
             // Elementos do drawer
@@ -1386,21 +1399,42 @@ if ($shortcode_category_id) {
                 document.body.style.overflow = '';
             }
 
-            // Event listeners para botões "Ver detalhes"
+            function getCourseDataFromCard(card) {
+                return {
+                    id: card.dataset.courseId,
+                    name: card.dataset.courseName,
+                    description: card.dataset.courseDescription,
+                    category: card.dataset.courseCategory,
+                    price: card.dataset.coursePrice
+                };
+            }
+
+            // Clique em toda a área útil do card abre o drawer
+            courseCards.forEach(function(card) {
+                card.addEventListener('click', function() {
+                    openDrawer(getCourseDataFromCard(card));
+                });
+
+                card.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openDrawer(getCourseDataFromCard(card));
+                    }
+                });
+            });
+
+            // O ícone continua como atalho visual para abrir o drawer
             detailButtons.forEach(function(button) {
                 button.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    
-                    const courseData = {
-                        id: this.dataset.courseId,
-                        name: this.dataset.courseName,
-                        description: this.dataset.courseDescription,
-                        category: this.dataset.courseCategory,
-                        price: this.dataset.coursePrice
-                    };
-                    
-                    openDrawer(courseData);
+
+                    const card = this.closest('.course-card');
+                    if (!card) {
+                        return;
+                    }
+
+                    openDrawer(getCourseDataFromCard(card));
                 });
             });
 

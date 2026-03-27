@@ -3,7 +3,7 @@
  * Plugin Name: Moodle Management
  * Plugin URI: https://falabetinho.com.br
  * Description: Gerencia a integração do WordPress com Moodle
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Falabetinho
  * Author URI: https://falabetinho.com.br
  * License: GPL-2.0+
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MOODLE_MANAGEMENT_VERSION', '1.0.0');
+define('MOODLE_MANAGEMENT_VERSION', '1.0.1');
 define('MOODLE_MANAGEMENT_PATH', plugin_dir_path(__FILE__));
 define('MOODLE_MANAGEMENT_URL', plugin_dir_url(__FILE__));
 

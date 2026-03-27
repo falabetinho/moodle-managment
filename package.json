@@ -1,6 +1,6 @@
 {
   "name": "moodle-management",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Plugin WordPress para gerenciar a integração com Moodle",
   "main": "moodle-management.php",
   "scripts": {
