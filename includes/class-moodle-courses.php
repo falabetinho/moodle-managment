@@ -55,7 +55,8 @@ class Moodle_Courses {
         global $wpdb;
         $table = $wpdb->prefix . 'moodle_categories';
         
-        $query = "SELECT * FROM $table WHERE parent_id IS NULL";
+        // Root Moodle categories can be stored as NULL or 0.
+        $query = "SELECT * FROM $table WHERE parent_id IS NULL OR parent_id = 0";
         
         if ($parent_id !== null) {
             $query = $wpdb->prepare("SELECT * FROM $table WHERE parent_id = %d", $parent_id);
@@ -268,26 +269,17 @@ class Moodle_Courses {
     /**
      * Render category dropdown options
      */
-    public static function render_category_options() {
+    public static function render_category_options($selected_category = '') {
         $categories = self::get_categories();
         
         foreach ($categories as $category) {
             echo sprintf(
-                '<optgroup label="%s">',
-                esc_attr($category->name)
-            );
-            
-            echo sprintf(
-                '<option value="%s" data-category-id="%d">%s</option>',
+                '<option value="%s" data-category-id="%d" %s>%s</option>',
                 esc_attr($category->moodle_id),
                 esc_attr($category->moodle_id),
+                selected((string) $selected_category, (string) $category->moodle_id, false),
                 esc_html($category->name)
             );
-            
-            // Get and display subcategories
-            self::render_subcategory_options($category->moodle_id, 1);
-            
-            echo '</optgroup>';
         }
     }
 

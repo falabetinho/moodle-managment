@@ -71,13 +71,12 @@ if ($shortcode_category_id) {
         $courses = Moodle_Courses::get_courses_by_category_tree($shortcode_category_id, $show_subcategories);
     }
     
-    // Aplicar busca se existir
     if ($search_term) {
         $courses = array_filter($courses, function($course) use ($search_term) {
             return stripos($course->name, $search_term) !== false || stripos($course->shortname, $search_term) !== false;
         });
     }
-    
+
     $total_courses = count($courses);
     $courses = array_slice($courses, $offset, $per_page);
 } elseif ($selected_category) {
@@ -87,6 +86,12 @@ if ($shortcode_category_id) {
     } else {
         $courses = Moodle_Courses::get_courses_by_category_tree(intval($selected_category), $show_subcategories);
     }
+    if ($search_term) {
+        $courses = array_filter($courses, function($course) use ($search_term) {
+            return stripos($course->name, $search_term) !== false || stripos($course->shortname, $search_term) !== false;
+        });
+    }
+
     $total_courses = count($courses);
     $courses = array_slice($courses, $offset, $per_page);
 } elseif ($search_term) {
@@ -128,7 +133,7 @@ if ($shortcode_category_id) {
                                     <option value="">
                                         <?php echo esc_html(__('Todas as categorias', 'moodle-management')); ?>
                                     </option>
-                                    <?php Moodle_Courses::render_category_options(); ?>
+                                    <?php Moodle_Courses::render_category_options($selected_category); ?>
                                 </select>
                             </div>
                         <?php else : ?>
