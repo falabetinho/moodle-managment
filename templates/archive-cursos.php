@@ -33,10 +33,21 @@ global $wpdb;
 $settings_table = $wpdb->prefix . 'moodle_settings';
 $moodle_base_url = rtrim((string) $wpdb->get_var("SELECT setting_value FROM $settings_table WHERE setting_key = 'base_url'"), '/');
 
-$paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
-if (isset($_GET['paged'])) {
-    $paged = intval($_GET['paged']);
+$paged = max(
+    1,
+    absint(get_query_var('mc_page')),
+    isset($_GET['mc_page']) ? absint($_GET['mc_page']) : 0,
+    absint(get_query_var('paged')),
+    isset($_GET['paged']) ? absint($_GET['paged']) : 0,
+    absint(get_query_var('page')),
+    isset($_GET['page']) ? absint($_GET['page']) : 0
+);
+
+$listing_url = $page_url ?: get_post_type_archive_link('curso');
+if (empty($listing_url)) {
+    $listing_url = get_permalink(get_queried_object_id());
 }
+$listing_url = remove_query_arg(array('mc_page', 'paged', 'page'), $listing_url);
 
 $per_page = 12;
 $offset = ($paged - 1) * $per_page;
@@ -104,7 +115,7 @@ if ($shortcode_category_id) {
         <div class="moodle-courses-container">
             <!-- Filtros e Busca -->
             <div class="courses-filters">
-                <form method="get" action="<?php echo esc_url($page_url ?: ''); ?>" class="filters-form">
+                <form method="get" action="<?php echo esc_url($listing_url); ?>" class="filters-form">
                     <!-- Linha 1: Categoria -->
                     <div class="filter-row filter-row-category">
                         <!-- Filtro por Categoria (apenas se não estiver restringido pelo shortcode) -->
@@ -183,7 +194,7 @@ if ($shortcode_category_id) {
                                 <?php echo esc_html(__('Filtrar', 'moodle-management')); ?>
                             </button>
                             <?php if (($selected_category && !$shortcode_category_id) || $selected_subcategory || $search_term) : ?>
-                                <a href="<?php echo esc_url($page_url ?: get_post_type_archive_link('curso')); ?>" class="button">
+                                <a href="<?php echo esc_url($listing_url); ?>" class="button">
                                     <?php echo esc_html(__('Limpar Filtros', 'moodle-management')); ?>
                                 </a>
                             <?php endif; ?>
@@ -310,8 +321,7 @@ if ($shortcode_category_id) {
                     ?>
                         <div class="courses-pagination">
                             <?php
-                            // Usar $page_url do shortcode se disponível, senão usar o arquivo de cursos
-                            $base_url = $page_url ?: get_post_type_archive_link('curso');
+                            $base_url = $listing_url;
                             
                             if ($selected_category && !$shortcode_category_id) {
                                 $base_url = add_query_arg('categoria', $selected_category, $base_url);
@@ -349,7 +359,7 @@ if ($shortcode_category_id) {
 
                             // Link "Anterior"
                             if ($paged > 1) {
-                                $prev_url = add_query_arg('paged', $paged - 1, $base_url);
+                                $prev_url = add_query_arg('mc_page', $paged - 1, $base_url);
                                 echo sprintf(
                                     '<a class="page-numbers prev" href="%s"><i class="fas fa-chevron-left"></i> %s</a>',
                                     esc_url($prev_url),
@@ -359,7 +369,7 @@ if ($shortcode_category_id) {
 
                             // Primeira página + reticências
                             if ($start_page > 1) {
-                                $first_url = add_query_arg('paged', 1, $base_url);
+                                $first_url = add_query_arg('mc_page', 1, $base_url);
                                 echo sprintf(
                                     '<a class="page-numbers" href="%s">1</a>',
                                     esc_url($first_url)
@@ -371,7 +381,7 @@ if ($shortcode_category_id) {
 
                             // Páginas numeradas
                             for ($i = $start_page; $i <= $end_page; $i++) {
-                                $pagination_url = add_query_arg('paged', $i, $base_url);
+                                $pagination_url = add_query_arg('mc_page', $i, $base_url);
                                 $class = $i === $paged ? 'current' : '';
                                 
                                 if ($i === $paged) {
@@ -390,7 +400,7 @@ if ($shortcode_category_id) {
                                 if ($end_page < $max_pages - 1) {
                                     echo '<span class="page-numbers dots">...</span>';
                                 }
-                                $last_url = add_query_arg('paged', $max_pages, $base_url);
+                                $last_url = add_query_arg('mc_page', $max_pages, $base_url);
                                 echo sprintf(
                                     '<a class="page-numbers" href="%s">%d</a>',
                                     esc_url($last_url),
@@ -400,7 +410,7 @@ if ($shortcode_category_id) {
 
                             // Link "Próximo"
                             if ($paged < $max_pages) {
-                                $next_url = add_query_arg('paged', $paged + 1, $base_url);
+                                $next_url = add_query_arg('mc_page', $paged + 1, $base_url);
                                 echo sprintf(
                                     '<a class="page-numbers next" href="%s">%s <i class="fas fa-chevron-right"></i></a>',
                                     esc_url($next_url),

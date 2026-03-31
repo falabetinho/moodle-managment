@@ -509,6 +509,81 @@ class Moodle_Admin_Tabs {
             <p class="description" style="margin-top: 14px;">
                 <?php echo esc_html(__('Dica: use true/false para atributos booleanos. Os filtros da página funcionam normalmente quando o shortcode está inserido em uma página.', 'moodle-management')); ?>
             </p>
+
+            <hr style="margin: 32px 0 24px;">
+
+            <h2><?php echo esc_html(__('Shortcode: Carrossel de Cursos', 'moodle-management')); ?></h2>
+
+            <p>
+                <?php echo esc_html(__('Exibe os cursos em um carrossel deslizante com filtros de categoria e botão de detalhes.', 'moodle-management')); ?>
+            </p>
+
+            <p>
+                <code>[moodle_carrossel]</code>
+            </p>
+
+            <h3><?php echo esc_html(__('Atributos Disponíveis', 'moodle-management')); ?></h3>
+            <table class="wp-list-table widefat striped">
+                <thead>
+                    <tr>
+                        <th><?php echo esc_html(__('Atributo', 'moodle-management')); ?></th>
+                        <th><?php echo esc_html(__('Padrão', 'moodle-management')); ?></th>
+                        <th><?php echo esc_html(__('Descrição', 'moodle-management')); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>category_id</code></td>
+                        <td><code>null</code></td>
+                        <td><?php echo esc_html(__('Filtra cursos de uma categoria específica do Moodle (ID numérico).', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>show_subcategories</code></td>
+                        <td><code>true</code></td>
+                        <td><?php echo esc_html(__('Inclui cursos de subcategorias quando category_id estiver definido.', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>show_title</code></td>
+                        <td><code>false</code></td>
+                        <td><?php echo esc_html(__('Exibe o título acima do carrossel.', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>title</code></td>
+                        <td><code>Cursos Disponíveis</code></td>
+                        <td><?php echo esc_html(__('Texto do título (requer show_title="true").', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>limit</code></td>
+                        <td><code>0</code></td>
+                        <td><?php echo esc_html(__('Número máximo de cursos exibidos. 0 = sem limite.', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>autoplay</code></td>
+                        <td><code>false</code></td>
+                        <td><?php echo esc_html(__('Avança automaticamente pelo carrossel.', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>autoplay_speed</code></td>
+                        <td><code>4000</code></td>
+                        <td><?php echo esc_html(__('Intervalo do autoplay em milissegundos (mínimo: 1000).', 'moodle-management')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><code>color_scheme</code></td>
+                        <td><code>auto</code></td>
+                        <td><?php echo esc_html(__('Esquema de cores dos cards (auto).', 'moodle-management')); ?></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3><?php echo esc_html(__('Exemplos Prontos', 'moodle-management')); ?></h3>
+            <p><code>[moodle_carrossel]</code></p>
+            <p><code>[moodle_carrossel show_title="true" title="Destaques"]</code></p>
+            <p><code>[moodle_carrossel category_id="123" limit="9"]</code></p>
+            <p><code>[moodle_carrossel autoplay="true" autoplay_speed="5000"]</code></p>
+
+            <p class="description" style="margin-top: 14px;">
+                <?php echo esc_html(__('Dica: os filtros de categoria no carrossel são gerados automaticamente com base nas categorias dos cursos carregados. Aparece apenas quando há mais de uma categoria.', 'moodle-management')); ?>
+            </p>
         </div>
         <?php
     }

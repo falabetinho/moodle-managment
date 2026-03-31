@@ -20,6 +20,7 @@ class Moodle_Courses {
         add_action('template_include', array($this, 'load_course_template'));
         add_filter('body_class', array($this, 'add_body_classes'));
         add_shortcode('moodle_cursos', array($this, 'render_courses_shortcode'));
+        add_shortcode('moodle_carrossel', array($this, 'render_carousel_shortcode'));
     }
 
     /**
@@ -386,6 +387,35 @@ class Moodle_Courses {
 
         ob_start();
         include MOODLE_MANAGEMENT_PATH . 'templates/archive-cursos.php';
+        return ob_get_clean();
+    }
+
+    /**
+     * Render carousel shortcode
+     *
+     * Uso:
+     * [moodle_carrossel] - Todos os cursos em carrossel
+     * [moodle_carrossel category_id="123"] - Carrossel de cursos da categoria 123
+     * [moodle_carrossel limit="9" autoplay="true" autoplay_speed="5000"]
+     */
+    public function render_carousel_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'category_id'        => null,
+            'show_subcategories' => true,
+            'show_title'         => false,
+            'title'              => '',
+            'color_scheme'       => 'auto',
+            'limit'              => 0,
+            'autoplay'           => false,
+            'autoplay_speed'     => 4000,
+        ), $atts, 'moodle_carrossel');
+
+        global $moodle_carrossel_shortcode_atts;
+        $moodle_carrossel_shortcode_atts = $atts;
+        $moodle_carrossel_shortcode_atts['instance_id'] = 'mcw' . substr( md5( uniqid( '', true ) ), 0, 8 );
+
+        ob_start();
+        include MOODLE_MANAGEMENT_PATH . 'templates/carousel-cursos.php';
         return ob_get_clean();
     }
 

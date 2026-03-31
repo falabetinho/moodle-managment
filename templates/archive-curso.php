@@ -34,39 +34,20 @@ get_header();
                         <select id="categoria-filtro" class="categoria-dropdown">
                             <option value=""><?php echo esc_html(__('Todas as categorias', 'moodle-management')); ?></option>
                             <?php
-                            $categories = get_terms(array(
+                            $parent_categories = get_terms(array(
                                 'taxonomy' => 'categoria-curso',
                                 'hide_empty' => false,
                                 'parent' => 0, // Only top-level categories
                             ));
 
-                            foreach ($categories as $category) {
-                                $subcats = get_terms(array(
-                                    'taxonomy' => 'categoria-curso',
-                                    'parent' => $category->term_id,
-                                    'hide_empty' => false,
-                                ));
-                                
-                                echo sprintf(
-                                    '<optgroup label="%s">',
-                                    esc_attr($category->name)
-                                );
-                                
-                                echo sprintf(
-                                    '<option value="%s">%s</option>',
-                                    esc_attr($category->slug),
-                                    esc_html($category->name)
-                                );
-
-                                foreach ($subcats as $subcat) {
+                            if (!is_wp_error($parent_categories) && !empty($parent_categories)) {
+                                foreach ($parent_categories as $category) {
                                     echo sprintf(
-                                        '<option value="%s">&nbsp;&nbsp;%s</option>',
-                                        esc_attr($subcat->slug),
-                                        esc_html($subcat->name)
+                                        '<option value="%s">%s</option>',
+                                        esc_attr($category->slug),
+                                        esc_html($category->name)
                                     );
                                 }
-                                
-                                echo '</optgroup>';
                             }
                             ?>
                         </select>
