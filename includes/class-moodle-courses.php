@@ -137,6 +137,195 @@ class Moodle_Courses {
     }
 
     /**
+     * Delete a category and all related data (subcategories, courses and prices)
+     */
+    public static function delete_category_cascade($category_id) {
+        $category_id = intval($category_id);
+
+        if ($category_id <= 0) {
+            return new WP_Error('invalid_category', __('Categoria inválida.', 'moodle-management'));
+        }
+
+        global $wpdb;
+
+        $categories_table = $wpdb->prefix . 'moodle_categories';
+        $courses_table = $wpdb->prefix . 'moodle_courses';
+        $enrol_methods_table = $wpdb->prefix . 'moodle_enrol_methods';
+        $enrollments_table = $wpdb->prefix . 'moodle_enrollments';
+
+        $category_ids = array_values(array_unique(array_map('intval', self::get_all_subcategory_ids($category_id))));
+        if (empty($category_ids)) {
+            return new WP_Error('category_not_found', __('Categoria não encontrada.', 'moodle-management'));
+        }
+
+        $category_placeholders = implode(',', array_fill(0, count($category_ids), '%d'));
+
+        $course_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT moodle_id FROM $courses_table WHERE category_id IN ($category_placeholders)",
+                ...$category_ids
+            )
+        );
+        $course_ids = array_values(array_unique(array_map('intval', $course_ids)));
+
+        $deleted = array(
+            'categories' => 0,
+            'courses' => 0,
+            'prices' => 0,
+            'enrollments' => 0,
+            'posts' => 0,
+            'terms' => 0,
+        );
+
+        try {
+            $wpdb->query('START TRANSACTION');
+
+            if (!empty($course_ids)) {
+                $course_placeholders = implode(',', array_fill(0, count($course_ids), '%d'));
+
+                $deleted_prices = $wpdb->query(
+                    $wpdb->prepare(
+                        "DELETE FROM $enrol_methods_table WHERE moodle_course_id IN ($course_placeholders)",
+                        ...$course_ids
+                    )
+                );
+                if ($deleted_prices === false) {
+                    throw new Exception($wpdb->last_error ?: __('Erro ao excluir preços dos cursos.', 'moodle-management'));
+                }
+                $deleted['prices'] += (int) $deleted_prices;
+
+                $deleted_enrollments = $wpdb->query(
+                    $wpdb->prepare(
+                        "DELETE FROM $enrollments_table WHERE moodle_course_id IN ($course_placeholders)",
+                        ...$course_ids
+                    )
+                );
+                if ($deleted_enrollments === false) {
+                    throw new Exception($wpdb->last_error ?: __('Erro ao excluir matrículas dos cursos.', 'moodle-management'));
+                }
+                $deleted['enrollments'] += (int) $deleted_enrollments;
+            }
+
+            $deleted_prices_by_category = $wpdb->query(
+                $wpdb->prepare(
+                    "DELETE FROM $enrol_methods_table WHERE category_id IN ($category_placeholders)",
+                    ...$category_ids
+                )
+            );
+            if ($deleted_prices_by_category === false) {
+                throw new Exception($wpdb->last_error ?: __('Erro ao excluir preços por categoria.', 'moodle-management'));
+            }
+            $deleted['prices'] += (int) $deleted_prices_by_category;
+
+            $deleted_courses = $wpdb->query(
+                $wpdb->prepare(
+                    "DELETE FROM $courses_table WHERE category_id IN ($category_placeholders)",
+                    ...$category_ids
+                )
+            );
+            if ($deleted_courses === false) {
+                throw new Exception($wpdb->last_error ?: __('Erro ao excluir cursos da categoria.', 'moodle-management'));
+            }
+            $deleted['courses'] = (int) $deleted_courses;
+
+            $deleted_categories = $wpdb->query(
+                $wpdb->prepare(
+                    "DELETE FROM $categories_table WHERE moodle_id IN ($category_placeholders)",
+                    ...$category_ids
+                )
+            );
+            if ($deleted_categories === false) {
+                throw new Exception($wpdb->last_error ?: __('Erro ao excluir categorias.', 'moodle-management'));
+            }
+            $deleted['categories'] = (int) $deleted_categories;
+
+            if (!empty($course_ids)) {
+                $deleted['posts'] = self::delete_course_posts($course_ids);
+            }
+
+            $deleted['terms'] = self::delete_category_terms($category_ids);
+
+            $wpdb->query('COMMIT');
+        } catch (Exception $e) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('category_delete_failed', $e->getMessage());
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * Delete WP posts linked to Moodle course IDs
+     */
+    private static function delete_course_posts($course_ids) {
+        global $wpdb;
+
+        $course_ids = array_values(array_unique(array_map('intval', $course_ids)));
+        if (empty($course_ids)) {
+            return 0;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($course_ids), '%d'));
+        $post_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'moodle_course_id' AND meta_value IN ($placeholders)",
+                ...$course_ids
+            )
+        );
+
+        $deleted_posts = 0;
+        foreach ($post_ids as $post_id) {
+            $deleted = wp_delete_post((int) $post_id, true);
+            if ($deleted) {
+                $deleted_posts++;
+            }
+        }
+
+        return $deleted_posts;
+    }
+
+    /**
+     * Delete WP terms linked to Moodle category IDs
+     */
+    private static function delete_category_terms($category_ids) {
+        if (!taxonomy_exists('categoria-curso')) {
+            return 0;
+        }
+
+        $category_ids = array_values(array_unique(array_map('intval', $category_ids)));
+        if (empty($category_ids)) {
+            return 0;
+        }
+
+        $term_ids = get_terms(array(
+            'taxonomy' => 'categoria-curso',
+            'hide_empty' => false,
+            'fields' => 'ids',
+            'meta_query' => array(
+                array(
+                    'key' => 'moodle_category_id',
+                    'value' => $category_ids,
+                    'compare' => 'IN',
+                ),
+            ),
+        ));
+
+        if (is_wp_error($term_ids) || empty($term_ids)) {
+            return 0;
+        }
+
+        $deleted_terms = 0;
+        foreach ($term_ids as $term_id) {
+            $deleted = wp_delete_term((int) $term_id, 'categoria-curso');
+            if (!is_wp_error($deleted)) {
+                $deleted_terms++;
+            }
+        }
+
+        return $deleted_terms;
+    }
+
+    /**
      * Check if category has direct subcategories
      */
     public static function has_subcategories($category_id) {

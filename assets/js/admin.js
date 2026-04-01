@@ -147,6 +147,57 @@ jQuery(function($) {
         });
     });
 
+    // Delete category and related records
+    $('.moodle-delete-category').on('click', function(e) {
+        e.preventDefault();
+
+        var $button = $(this);
+        var $row = $button.closest('tr');
+        var $resultDiv = $('#sync-categories-result');
+        var categoryId = $button.data('category-id');
+        var categoryName = $button.data('category-name') || '';
+
+        var confirmationMessage = 'Deseja excluir a categoria "' + categoryName + '"?\n\nIsso também removerá subcategorias, cursos vinculados e preços relacionados.';
+        if (!confirm(confirmationMessage)) {
+            return;
+        }
+
+        $.ajax({
+            type: 'POST',
+            url: moodleManagement.ajaxurl,
+            data: {
+                action: 'moodle_delete_category',
+                nonce: moodleManagement.nonce,
+                category_id: categoryId
+            },
+            beforeSend: function() {
+                $button.prop('disabled', true).text('Excluindo...');
+            },
+            success: function(response) {
+                $resultDiv
+                    .removeClass('notice-error')
+                    .addClass('notice notice-success')
+                    .html('<p>' + response.data.message + '</p>')
+                    .show();
+
+                $row.fadeOut(250, function() {
+                    $(this).remove();
+                });
+            },
+            error: function(response) {
+                var errorMsg = response.responseJSON?.data?.message || 'Erro ao excluir categoria';
+                $resultDiv
+                    .removeClass('notice-success')
+                    .addClass('notice notice-error')
+                    .html('<p>' + errorMsg + '</p>')
+                    .show();
+            },
+            complete: function() {
+                $button.prop('disabled', false).text('Excluir');
+            }
+        });
+    });
+
     // Sync courses
     $('#sync-courses').on('click', function(e) {
         e.preventDefault();

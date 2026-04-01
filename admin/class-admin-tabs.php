@@ -39,6 +39,7 @@ class Moodle_Admin_Tabs {
         add_action('wp_ajax_moodle_save_settings', array($this, 'ajax_save_settings'));
         add_action('wp_ajax_moodle_test_connection', array($this, 'ajax_test_connection'));
         add_action('wp_ajax_moodle_sync_categories', array($this, 'ajax_sync_categories'));
+        add_action('wp_ajax_moodle_delete_category', array($this, 'ajax_delete_category'));
         add_action('wp_ajax_moodle_sync_courses', array($this, 'ajax_sync_courses'));
         add_action('wp_ajax_moodle_sync_enrol_methods', array($this, 'ajax_sync_enrol_methods'));
         add_action('wp_ajax_moodle_sync_all_enrol_methods', array($this, 'ajax_sync_all_enrol_methods'));
@@ -235,6 +236,7 @@ class Moodle_Admin_Tabs {
                             <th><?php echo esc_html(__('Parent', 'moodle-management')); ?></th>
                             <th><?php echo esc_html(__('Descrição', 'moodle-management')); ?></th>
                             <th><?php echo esc_html(__('Data de Atualização', 'moodle-management')); ?></th>
+                            <th><?php echo esc_html(__('Ações', 'moodle-management')); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -247,6 +249,16 @@ class Moodle_Admin_Tabs {
                                 <td><?php echo esc_html($category->parent_id); ?></td>
                                 <td><?php echo wp_kses_post(wp_trim_words($category->description, 20)); ?></td>
                                 <td><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($category->updated_at))); ?></td>
+                                <td>
+                                    <button
+                                        type="button"
+                                        class="button button-link-delete moodle-delete-category"
+                                        data-category-id="<?php echo esc_attr($category->moodle_id); ?>"
+                                        data-category-name="<?php echo esc_attr($category->name); ?>"
+                                    >
+                                        <?php echo esc_html(__('Excluir', 'moodle-management')); ?>
+                                    </button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -679,6 +691,44 @@ class Moodle_Admin_Tabs {
                 'message' => $e->getMessage()
             ));
         }
+    }
+
+    /**
+     * AJAX: Delete one category and all related records
+     */
+    public function ajax_delete_category() {
+        check_ajax_referer('moodle_management_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html(__('Sem permissão', 'moodle-management')));
+        }
+
+        $category_id = isset($_POST['category_id']) ? intval($_POST['category_id']) : 0;
+        if ($category_id <= 0) {
+            wp_send_json_error(array(
+                'message' => __('Categoria inválida.', 'moodle-management')
+            ));
+        }
+
+        $deleted = Moodle_Courses::delete_category_cascade($category_id);
+
+        if (is_wp_error($deleted)) {
+            wp_send_json_error(array(
+                'message' => $deleted->get_error_message()
+            ));
+        }
+
+        $message = sprintf(
+            __('Categoria excluída com sucesso. Categorias removidas: %1$d, cursos removidos: %2$d, preços removidos: %3$d.', 'moodle-management'),
+            intval($deleted['categories']),
+            intval($deleted['courses']),
+            intval($deleted['prices'])
+        );
+
+        wp_send_json_success(array(
+            'message' => $message,
+            'deleted' => $deleted,
+        ));
     }
 
     /**
