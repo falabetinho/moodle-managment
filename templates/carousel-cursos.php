@@ -111,7 +111,7 @@ if ( ! $all_courses_url ) {
                                  aria-label="<?php echo esc_attr( sprintf( __( 'Ver detalhes do curso %s', 'moodle-management' ), $course->name ) ); ?>"
                                  data-course-id="<?php echo esc_attr( $course->moodle_id ); ?>"
                                  data-course-name="<?php echo esc_attr( $course->name ); ?>"
-                                 data-course-description="<?php echo esc_attr( wp_strip_all_tags( $course->description ) ); ?>"
+                                 data-course-description="<?php echo esc_attr( wp_kses_post( $course->description ) ); ?>"
                                  data-course-category="<?php echo $category ? esc_attr( $category->name ) : ''; ?>"
                                  data-course-price="<?php echo $disp_price > 0 ? esc_attr( wp_strip_all_tags( $price_msg ) ) : ''; ?>">
 
@@ -852,7 +852,7 @@ if ( ! $all_courses_url ) {
         function openDrawer(data) {
             drawerName.textContent     = data.name        || '';
             drawerCategory.textContent = data.category    || '';
-            drawerDesc.textContent     = data.description || '';
+            drawerDesc.innerHTML       = data.description || '';
 
             if (data.price && data.price.trim()) {
                 drawerPrice.innerHTML      = data.price;
