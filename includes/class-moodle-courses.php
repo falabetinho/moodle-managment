@@ -246,6 +246,9 @@ class Moodle_Courses {
             $deleted['terms'] = self::delete_category_terms($category_ids);
 
             $wpdb->query('COMMIT');
+
+            // Trigger WordPress action hook to allow extensibility
+            do_action('moodle_management_category_deleted', $category_id, $deleted);
         } catch (Exception $e) {
             $wpdb->query('ROLLBACK');
             return new WP_Error('category_delete_failed', $e->getMessage());
@@ -325,6 +328,9 @@ class Moodle_Courses {
             $deleted['posts'] = self::delete_course_posts(array($course_id));
 
             $wpdb->query('COMMIT');
+
+            // Trigger WordPress action hook to allow extensibility
+            do_action('moodle_management_course_deleted', $course_id, $deleted);
         } catch (Exception $e) {
             $wpdb->query('ROLLBACK');
             return new WP_Error('course_delete_failed', $e->getMessage());

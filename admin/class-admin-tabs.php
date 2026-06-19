@@ -40,6 +40,7 @@ class Moodle_Admin_Tabs {
         add_action('wp_ajax_moodle_test_connection', array($this, 'ajax_test_connection'));
         add_action('wp_ajax_moodle_sync_categories', array($this, 'ajax_sync_categories'));
         add_action('wp_ajax_moodle_delete_category', array($this, 'ajax_delete_category'));
+        add_action('wp_ajax_moodle_delete_course', array($this, 'ajax_delete_course'));
         add_action('wp_ajax_moodle_sync_courses', array($this, 'ajax_sync_courses'));
         add_action('wp_ajax_moodle_sync_enrol_methods', array($this, 'ajax_sync_enrol_methods'));
         add_action('wp_ajax_moodle_sync_all_enrol_methods', array($this, 'ajax_sync_all_enrol_methods'));
@@ -300,6 +301,7 @@ class Moodle_Admin_Tabs {
                             <th><?php echo esc_html(__('Nome Curto', 'moodle-management')); ?></th>
                             <th><?php echo esc_html(__('Status', 'moodle-management')); ?></th>
                             <th><?php echo esc_html(__('Data de Atualização', 'moodle-management')); ?></th>
+                            <th><?php echo esc_html(__('Ações', 'moodle-management')); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -315,6 +317,16 @@ class Moodle_Admin_Tabs {
                                     ?>
                                 </td>
                                 <td><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($course->updated_at))); ?></td>
+                                <td>
+                                    <button
+                                        type="button"
+                                        class="button button-link-delete moodle-delete-course"
+                                        data-course-id="<?php echo esc_attr($course->moodle_id); ?>"
+                                        data-course-name="<?php echo esc_attr($course->name); ?>"
+                                    >
+                                        <?php echo esc_html(__('Excluir', 'moodle-management')); ?>
+                                    </button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -747,6 +759,45 @@ class Moodle_Admin_Tabs {
             intval($deleted['categories']),
             intval($deleted['courses']),
             intval($deleted['prices'])
+        );
+
+        wp_send_json_success(array(
+            'message' => $message,
+            'deleted' => $deleted,
+        ));
+    }
+
+    /**
+     * AJAX: Delete one course and all related records
+     */
+    public function ajax_delete_course() {
+        check_ajax_referer('moodle_management_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html(__('Sem permissão', 'moodle-management')));
+        }
+
+        $course_id = isset($_POST['course_id']) ? intval($_POST['course_id']) : 0;
+        if ($course_id <= 0) {
+            wp_send_json_error(array(
+                'message' => __('Curso inválido.', 'moodle-management')
+            ));
+        }
+
+        $deleted = Moodle_Courses::delete_course_cascade($course_id);
+
+        if (is_wp_error($deleted)) {
+            wp_send_json_error(array(
+                'message' => $deleted->get_error_message()
+            ));
+        }
+
+        $message = sprintf(
+            __('Curso excluído com sucesso. Cursos removidos: %1$d, preços removidos: %2$d, matrículas removidas: %3$d, posts removidos: %4$d.', 'moodle-management'),
+            intval($deleted['courses']),
+            intval($deleted['prices']),
+            intval($deleted['enrollments']),
+            intval($deleted['posts'])
         );
 
         wp_send_json_success(array(

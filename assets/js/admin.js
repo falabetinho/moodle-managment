@@ -198,6 +198,57 @@ jQuery(function($) {
         });
     });
 
+    // Delete course and related records
+    $('.moodle-delete-course').on('click', function(e) {
+        e.preventDefault();
+
+        var $button = $(this);
+        var $row = $button.closest('tr');
+        var $resultDiv = $('#sync-courses-result');
+        var courseId = $button.data('course-id');
+        var courseName = $button.data('course-name') || '';
+
+        var confirmationMessage = 'Deseja excluir o curso "' + courseName + '"?\n\nIsso também removerá preços, matrículas vinculadas e o post correspondente.';
+        if (!confirm(confirmationMessage)) {
+            return;
+        }
+
+        $.ajax({
+            type: 'POST',
+            url: moodleManagement.ajaxurl,
+            data: {
+                action: 'moodle_delete_course',
+                nonce: moodleManagement.nonce,
+                course_id: courseId
+            },
+            beforeSend: function() {
+                $button.prop('disabled', true).text('Excluindo...');
+            },
+            success: function(response) {
+                $resultDiv
+                    .removeClass('notice-error')
+                    .addClass('notice notice-success')
+                    .html('<p>' + response.data.message + '</p>')
+                    .show();
+
+                $row.fadeOut(250, function() {
+                    $(this).remove();
+                });
+            },
+            error: function(response) {
+                var errorMsg = response.responseJSON?.data?.message || 'Erro ao excluir curso';
+                $resultDiv
+                    .removeClass('notice-success')
+                    .addClass('notice notice-error')
+                    .html('<p>' + errorMsg + '</p>')
+                    .show();
+            },
+            complete: function() {
+                $button.prop('disabled', false).text('Excluir');
+            }
+        });
+    });
+
     // Sync courses
     $('#sync-courses').on('click', function(e) {
         e.preventDefault();
