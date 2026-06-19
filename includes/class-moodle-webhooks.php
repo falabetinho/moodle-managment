@@ -68,6 +68,19 @@ class Moodle_Webhooks {
             'callback' => array($this, 'handle_course_delete'),
             'permission_callback' => array($this, 'authorize_request'),
         ));
+
+        register_rest_route('moodle-management/v1', '/webhooks/category/delete', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'handle_category_delete'),
+            'permission_callback' => array($this, 'authorize_request'),
+        ));
+
+        // Alias route kept for integration flexibility.
+        register_rest_route('moodle-management/v1', '/webhooks/categories/delete', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'handle_category_delete'),
+            'permission_callback' => array($this, 'authorize_request'),
+        ));
     }
 
     /**
@@ -275,6 +288,55 @@ class Moodle_Webhooks {
     }
 
     /**
+     * Handle webhook to delete one category by Moodle ID
+     */
+    public function handle_category_delete($request) {
+        try {
+            $category_id = $this->extract_category_id($request);
+            if ($category_id <= 0) {
+                return new WP_Error('invalid_category_id', __('Informe um category_id válido.', 'moodle-management'), array('status' => 400));
+            }
+
+            $category = Moodle_Courses::get_category($category_id);
+            if (!$category) {
+                return new WP_Error(
+                    'moodle_category_not_found',
+                    __('Categoria não encontrada.', 'moodle-management'),
+                    array('status' => 404)
+                );
+            }
+
+            $deleted = Moodle_Courses::delete_category_cascade($category_id);
+            if (is_wp_error($deleted)) {
+                $status = 500;
+                if (in_array($deleted->get_error_code(), array('invalid_category', 'invalid_category_id'), true)) {
+                    $status = 400;
+                }
+                if ('category_not_found' === $deleted->get_error_code()) {
+                    $status = 404;
+                }
+
+                return new WP_Error(
+                    'moodle_category_delete_failed',
+                    $deleted->get_error_message(),
+                    array('status' => $status)
+                );
+            }
+
+            return rest_ensure_response(array(
+                'success' => true,
+                'message' => sprintf(__('Categoria %d excluída com sucesso!', 'moodle-management'), $category_id),
+                'data' => array(
+                    'category_id' => $category_id,
+                    'deleted' => $deleted,
+                ),
+            ));
+        } catch (Exception $e) {
+            return new WP_Error('moodle_webhook_error', $e->getMessage(), array('status' => 500));
+        }
+    }
+
+    /**
      * Extract course ID from webhook request payload/query/body
      */
     private function extract_course_id($request) {
@@ -303,6 +365,37 @@ class Moodle_Webhooks {
         }
 
         return intval($course_id);
+    }
+
+    /**
+     * Extract category ID from webhook request payload/query/body
+     */
+    private function extract_category_id($request) {
+        $category_id = $request->get_param('category_id');
+
+        if (empty($category_id)) {
+            $category_id = $request->get_param('moodle_category_id');
+        }
+
+        if (empty($category_id)) {
+            $category_id = $request->get_param('id');
+        }
+
+        if (empty($category_id)) {
+            $json = $request->get_json_params();
+
+            if (is_array($json)) {
+                if (!empty($json['category_id'])) {
+                    $category_id = $json['category_id'];
+                } elseif (!empty($json['moodle_category_id'])) {
+                    $category_id = $json['moodle_category_id'];
+                } elseif (!empty($json['id'])) {
+                    $category_id = $json['id'];
+                }
+            }
+        }
+
+        return intval($category_id);
     }
 
     /**
