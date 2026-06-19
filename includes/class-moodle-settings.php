@@ -320,6 +320,11 @@ class Moodle_Settings {
         
         // Formatar o preço
         $formatted_price = number_format($price, 2, $decimal_sep, '');
+
+        // Parcelamento único (0 ou 1): exibir apenas o preço, sem máscara
+        if ( intval( $installments ) <= 1 ) {
+            return $currency . ' ' . $formatted_price;
+        }
         
         // Criar a mensagem
         $message = self::get_price_message();

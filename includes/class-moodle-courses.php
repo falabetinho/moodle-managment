@@ -255,6 +255,85 @@ class Moodle_Courses {
     }
 
     /**
+     * Delete one course and all related data (prices, enrollments and linked posts)
+     */
+    public static function delete_course_cascade($course_id) {
+        $course_id = intval($course_id);
+
+        if ($course_id <= 0) {
+            return new WP_Error('invalid_course', __('Curso inválido.', 'moodle-management'));
+        }
+
+        global $wpdb;
+
+        $courses_table = $wpdb->prefix . 'moodle_courses';
+        $enrol_methods_table = $wpdb->prefix . 'moodle_enrol_methods';
+        $enrollments_table = $wpdb->prefix . 'moodle_enrollments';
+
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT moodle_id FROM $courses_table WHERE moodle_id = %d",
+            $course_id
+        ));
+
+        if (!$exists) {
+            return new WP_Error('course_not_found', __('Curso não encontrado.', 'moodle-management'));
+        }
+
+        $deleted = array(
+            'courses' => 0,
+            'prices' => 0,
+            'enrollments' => 0,
+            'posts' => 0,
+        );
+
+        try {
+            $wpdb->query('START TRANSACTION');
+
+            $deleted_prices = $wpdb->query(
+                $wpdb->prepare(
+                    "DELETE FROM $enrol_methods_table WHERE moodle_course_id = %d",
+                    $course_id
+                )
+            );
+            if ($deleted_prices === false) {
+                throw new Exception($wpdb->last_error ?: __('Erro ao excluir preços do curso.', 'moodle-management'));
+            }
+            $deleted['prices'] = (int) $deleted_prices;
+
+            $deleted_enrollments = $wpdb->query(
+                $wpdb->prepare(
+                    "DELETE FROM $enrollments_table WHERE moodle_course_id = %d",
+                    $course_id
+                )
+            );
+            if ($deleted_enrollments === false) {
+                throw new Exception($wpdb->last_error ?: __('Erro ao excluir matrículas do curso.', 'moodle-management'));
+            }
+            $deleted['enrollments'] = (int) $deleted_enrollments;
+
+            $deleted_course = $wpdb->query(
+                $wpdb->prepare(
+                    "DELETE FROM $courses_table WHERE moodle_id = %d",
+                    $course_id
+                )
+            );
+            if ($deleted_course === false) {
+                throw new Exception($wpdb->last_error ?: __('Erro ao excluir curso.', 'moodle-management'));
+            }
+            $deleted['courses'] = (int) $deleted_course;
+
+            $deleted['posts'] = self::delete_course_posts(array($course_id));
+
+            $wpdb->query('COMMIT');
+        } catch (Exception $e) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('course_delete_failed', $e->getMessage());
+        }
+
+        return $deleted;
+    }
+
+    /**
      * Delete WP posts linked to Moodle course IDs
      */
     private static function delete_course_posts($course_ids) {

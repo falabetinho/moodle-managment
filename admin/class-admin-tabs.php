@@ -422,11 +422,13 @@ class Moodle_Admin_Tabs {
         $categories_url = add_query_arg('token', $secret, $base . '/categories');
         $courses_url = add_query_arg('token', $secret, $base . '/courses');
         $prices_url = add_query_arg('token', $secret, $base . '/prices');
+        $course_delete_url = add_query_arg('token', $secret, $base . '/course/delete');
+        $courses_delete_url = add_query_arg('token', $secret, $base . '/courses/delete');
         ?>
         <div class="moodle-tab-content">
             <h2><?php echo esc_html(__('Webhooks', 'moodle-management')); ?></h2>
 
-            <p><?php echo esc_html(__('Use os webhooks abaixo para disparar atualizações internas de categorias, cursos e preços.', 'moodle-management')); ?></p>
+            <p><?php echo esc_html(__('Use os webhooks abaixo para disparar atualizações internas de categorias, cursos, preços e exclusão de curso.', 'moodle-management')); ?></p>
 
             <table class="wp-list-table widefat striped">
                 <thead>
@@ -448,11 +450,23 @@ class Moodle_Admin_Tabs {
                         <td><?php echo esc_html(__('Atualizar Preços', 'moodle-management')); ?></td>
                         <td><code><?php echo esc_html($prices_url); ?></code></td>
                     </tr>
+                    <tr>
+                        <td><?php echo esc_html(__('Excluir Curso por ID', 'moodle-management')); ?></td>
+                        <td><code><?php echo esc_html($course_delete_url); ?></code></td>
+                    </tr>
+                    <tr>
+                        <td><?php echo esc_html(__('Excluir Curso por ID (alias)', 'moodle-management')); ?></td>
+                        <td><code><?php echo esc_html($courses_delete_url); ?></code></td>
+                    </tr>
                 </tbody>
             </table>
 
             <p class="description" style="margin-top: 12px;">
                 <?php echo esc_html(__('Envie o token no header X-Moodle-Webhook-Token ou como parâmetro token na URL.', 'moodle-management')); ?>
+            </p>
+
+            <p class="description">
+                <?php echo esc_html(__('Para exclusão de curso, envie também course_id no body JSON, form-data, query string ou id/moodle_course_id.', 'moodle-management')); ?>
             </p>
         </div>
         <?php

@@ -55,6 +55,19 @@ class Moodle_Webhooks {
             'callback' => array($this, 'handle_prices'),
             'permission_callback' => array($this, 'authorize_request'),
         ));
+
+        register_rest_route('moodle-management/v1', '/webhooks/course/delete', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'handle_course_delete'),
+            'permission_callback' => array($this, 'authorize_request'),
+        ));
+
+        // Alias route kept for integration flexibility.
+        register_rest_route('moodle-management/v1', '/webhooks/courses/delete', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'handle_course_delete'),
+            'permission_callback' => array($this, 'authorize_request'),
+        ));
     }
 
     /**
@@ -219,6 +232,77 @@ class Moodle_Webhooks {
         } catch (Exception $e) {
             return new WP_Error('moodle_webhook_error', $e->getMessage(), array('status' => 500));
         }
+    }
+
+    /**
+     * Handle webhook to delete one course by Moodle ID
+     */
+    public function handle_course_delete($request) {
+        try {
+            $course_id = $this->extract_course_id($request);
+            if ($course_id <= 0) {
+                return new WP_Error('invalid_course_id', __('Informe um course_id válido.', 'moodle-management'), array('status' => 400));
+            }
+
+            $deleted = Moodle_Courses::delete_course_cascade($course_id);
+            if (is_wp_error($deleted)) {
+                $status = 500;
+                if (in_array($deleted->get_error_code(), array('invalid_course', 'invalid_course_id'), true)) {
+                    $status = 400;
+                }
+                if ('course_not_found' === $deleted->get_error_code()) {
+                    $status = 404;
+                }
+
+                return new WP_Error(
+                    'moodle_course_delete_failed',
+                    $deleted->get_error_message(),
+                    array('status' => $status)
+                );
+            }
+
+            return rest_ensure_response(array(
+                'success' => true,
+                'message' => sprintf(__('Curso %d excluído com sucesso!', 'moodle-management'), $course_id),
+                'data' => array(
+                    'course_id' => $course_id,
+                    'deleted' => $deleted,
+                ),
+            ));
+        } catch (Exception $e) {
+            return new WP_Error('moodle_webhook_error', $e->getMessage(), array('status' => 500));
+        }
+    }
+
+    /**
+     * Extract course ID from webhook request payload/query/body
+     */
+    private function extract_course_id($request) {
+        $course_id = $request->get_param('course_id');
+
+        if (empty($course_id)) {
+            $course_id = $request->get_param('moodle_course_id');
+        }
+
+        if (empty($course_id)) {
+            $course_id = $request->get_param('id');
+        }
+
+        if (empty($course_id)) {
+            $json = $request->get_json_params();
+
+            if (is_array($json)) {
+                if (!empty($json['course_id'])) {
+                    $course_id = $json['course_id'];
+                } elseif (!empty($json['moodle_course_id'])) {
+                    $course_id = $json['moodle_course_id'];
+                } elseif (!empty($json['id'])) {
+                    $course_id = $json['id'];
+                }
+            }
+        }
+
+        return intval($course_id);
     }
 
     /**
